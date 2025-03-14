@@ -9,7 +9,7 @@ using namespace std;
 class Object {
 	//interface class for all pieces
 public:
-	enum type_t { PAWN, EMPTY_CELL };
+	enum type_t { PAWN,ROOK,BISHOP, KNIGTH,QUEEN,KING, EMPTY_CELL };
 	enum color_t {WHITE,BLACK,NONE};
 	virtual void getCellNumber(int& x, int& y) = 0;
 	virtual type_t getType() = 0;
