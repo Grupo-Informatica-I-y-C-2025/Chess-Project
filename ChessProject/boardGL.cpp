@@ -1,4 +1,3 @@
-
 #include "freeglut.h"
 #include "gltools.h"
 #include "boardgl.h"
@@ -46,35 +45,98 @@ void BoardGL::DrawCell(int i, int j) {
 	// Note:(0, 0) screen coordinates is the upper left hand corner of the board
 	//
 	// INPUT: (i, j) are cell coordinates, (0,0) is the upper left hand square of the board// 
+
 	float glx, gly;
+	cell2center(i, j, glx, gly);
+
+	//Color gris si la pieza esta seleccionada
+	if (m_board->getTab()[i][j].getColor() == Object::WHITE)
+	{
+		if (m_board->getTab()[i][j].selected())GLTools::Color(gltools::GREY);//subraya si seleccionado
+		else GLTools::Color(gltools::WHITE);
+	}
+	if (m_board->getTab()[i][j].getColor() == Object::BLACK)
+	{
+		if (m_board->getTab()[i][j].selected())GLTools::Color(gltools::GREY);//subraya si seleccionado
+		else GLTools::Color(gltools::BLACK);
+	}
+
 	switch (m_board->getTab()[i][j].getType()) {
 
 	case Object::PAWN:
-		cell2center(i, j, glx, gly);
 		glDisable(GL_LIGHTING);
-
-		//Color gris si la pieza esta seleccionada
-		if (m_board->getTab()[i][j].getColor()==Object::WHITE)
-		{
-		if(m_board->getTab()[i][j].selected())GLTools::Color(gltools::GREY);//subraya si seleccionado
-		else GLTools::Color(gltools::WHITE);
-		}
-		if(m_board->getTab()[i][j].getColor() == Object::BLACK)
-		{
-			if (m_board->getTab()[i][j].selected())GLTools::Color(gltools::GREY);//subraya si seleccionado
-			else GLTools::Color(gltools::BLACK);
-		}
+		
+		//Dibuja el peÃ³n
 
 		glTranslatef(glx, gly, 0);
-
-		//Dibuja el peón
 		drawPawn(m_board->getTab()[i][j].getColor());
-
 		glTranslatef(-glx, -gly, 0);
+
+		glEnable(GL_LIGHTING);
+		break;
+
+	case Object::ROOK:
+		glDisable(GL_LIGHTING);
+
+		//Dibuja la torre
+
+		glTranslatef(glx, gly, 0);
+		drawRook(m_board->getTab()[i][j].getColor());
+		glTranslatef(-glx, -gly, 0);
+
+		glEnable(GL_LIGHTING);
+		break;
+
+	case Object::BISHOP:
+		glDisable(GL_LIGHTING);
+
+		//Dibuja el alfil
+
+		glTranslatef(glx, gly, 0);
+		drawBishop(m_board->getTab()[i][j].getColor());
+		glTranslatef(-glx, -gly, 0);
+
+		glEnable(GL_LIGHTING);
+		break;
+
+	case Object::KNIGTH:
+		glDisable(GL_LIGHTING);
+
+		//Dibuja el alfil
+
+		glTranslatef(glx, gly, 0);
+		drawKnigth(m_board->getTab()[i][j].getColor());
+		glTranslatef(-glx, -gly, 0);
+
+		glEnable(GL_LIGHTING);
+		break;
+
+	case Object::QUEEN:
+		glDisable(GL_LIGHTING);
+
+		//Dibuja el alfil
+
+		glTranslatef(glx, gly, 0);
+		drawQueen(m_board->getTab()[i][j].getColor());
+		glTranslatef(-glx, -gly, 0);
+
+		glEnable(GL_LIGHTING);
+		break;
+
+	case Object::KING:
+		glDisable(GL_LIGHTING);
+
+		//Dibuja el alfil
+
+		glTranslatef(glx, gly, 0);
+		drawKing(m_board->getTab()[i][j].getColor());
+		glTranslatef(-glx, -gly, 0);
+
 		glEnable(GL_LIGHTING);
 		break;
 
 	case Object::EMPTY_CELL:
+
 	default:
 		;
 	}
@@ -193,202 +255,6 @@ void BoardGL::KeyDown(unsigned char key) {
 	if (key == 'a') {
 		//** do something
 		//if(N>=2) N--;
-	}
-}
-
-void BoardGL::unselectAll() {
-	for (int i = 0; i < N; i++) {
-		for (int j = 0; j < N; j++) {
-			m_board->getTab()[i][j].unselectCell();
-			action = 0;
-		}
-	}
-}
-
-void BoardGL::activate()
-{
-	////Activar casillas -- parte propia	
-	if (m_board->getTab()[xcell_sel][ycell_sel].selected())
-	{
-		m_board->getTab()[xcell_sel][ycell_sel].unselectCell();
-		action = 0;
-	}
-	else if (m_board->getTab()[xcell_sel][ycell_sel].getType() != Object::EMPTY_CELL)
-	{
-		unselectAll();
-		m_board->getTab()[xcell_sel][ycell_sel].selectCell();
-		action = 1;
-	}
-	
-}
-
-void BoardGL::registerCall() {
-	if (!action)
-	{
-		src[0] = xcell_sel, src[1] = ycell_sel;
-	}
-	else {
-		dest[0] = xcell_sel, dest[1] = ycell_sel;
-	}
-}
-
-bool BoardGL::makeMove() {
-
-
-	if (src[0] != -1 && src[1] != -1 && dest[0] != -1 && dest[1] != -1 ) {
-		if ((m_board->getTab()[src[0]][src[1]].getColor() == m_board->getTab()[dest[0]][dest[1]].getColor()) && (m_board->getTab()[dest[0]][dest[1]].getColor() != Object::NONE))
-		{
-			return false;
-		}
-
-		else if (m_board->getTab()[src[0]][src[1]].getColor() == turn){
-
-
-			switch (m_board->getTab()[src[0]][src[1]].getType())
-			{
-			case Object::PAWN:
-				cout << "moving pawn \n";
-				pawnMove();
-				break;
-
-			case Object::EMPTY_CELL:
-
-				std::cout << "You do not have a piece there" << std::endl;
-				return false;
-				break;
-
-			default:
-
-				std::cerr << "Something went wrong in the switch statement in makeMove()" << std::endl;
-				return false;
-				break;
-			}
-		}
-
-
-
-		//fin reset
-		cout << "S: " << src[0] << " " << src[1] << "\n";
-		cout << "D: " << dest[0] << " " << dest[1] << "\n";
-		src[0] = -1, src[1] = -1, dest[0] = -1, dest[1] = -1;
-		unselectAll();
-
-	}
-}
-
-void BoardGL::doMove() {
-	//mueve la pieza de src a dest, vacía src y desactiva la acción
-	m_board->getTab()[dest[0]][dest[1]].setCell(dest[0], dest[1], Piece::PAWN, m_board->getTab()[src[0]][src[1]].getColor());
-	m_board->getTab()[src[0]][src[1]].setCell(src[0], src[1], Piece::EMPTY_CELL, Piece::NONE);
-	action = 0;
-}
-
-void BoardGL::changeTurn() {
-	if (turn == Object::BLACK)turn = Object::WHITE;
-	else turn = Object::BLACK;
-}
-
-bool BoardGL::pawnMove() {
-
-
-	if (m_board->getTab()[src[0]][src[1]].getColor() == Object::WHITE)
-	{
-
-
-		if ((src[1] == dest[1]) && (dest[0] == src[0] - 1) && (m_board->getTab()[dest[0]][dest[1]].getColor() == Object::NONE))
-		{
-			//movimiento recto
-			doMove();
-			changeTurn();
-			return true;
-		}
-		else
-			if ((src[1] + 1 == dest[1] || src[1] - 1 == dest[1]) && src[0] - 1 == dest[0] && m_board->getTab()[dest[0]][dest[1]].getColor() == Object::BLACK)
-			{
-				//comida diagonal
-				doMove();
-				changeTurn();
-				return true;
-			}
-			else
-				return false;
-	}
-	else
-		if (m_board->getTab()[src[0]][src[1]].getColor() == Object::BLACK)
-		{
-			if (src[1] == dest[1] && dest[0] == src[0] + 1 && m_board->getTab()[dest[0]][dest[1]].getColor() == Object::NONE)
-			{
-				//movimiento recto
-				doMove();
-				changeTurn();
-				return true;
-			}
-			else
-				if ((src[1] + 1 == dest[1] || src[1] - 1 == dest[1]) && src[0] + 1 == dest[0] && m_board->getTab()[dest[0]][dest[1]].getColor() == Object::WHITE)
-				{
-					//comida diagonal
-					doMove();
-					changeTurn();
-					return true;
-				}
-				else
-					return false;
-		}
-		else
-			return false;
-}
-
-void BoardGL::drawPawn(Object::color_t c)
-{
-	if (c == Object::WHITE) {
-		//cabeza del peón
-		glTranslatef(0, width / 4, 0);
-		glutSolidSphere((width / 5.0f) * 0.9f, 50, 50);
-		glTranslatef(0, -width / 4, 0);
-
-		//cuerpo del peón
-
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef(0, -(width / 5.0f) * 0.9f, 0);
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef(-(width / 5.0f) * 0.9f, 0 , 0);
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef(0, -(width / 10.0f) * 0.9f, 0);
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef((width / 5.0f) * 0.9f, 0, 0);
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef((width / 5.0f) * 0.9f, 0, 0);
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef(0, (width / 10.0f) * 0.9f, 0);
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef(-(width / 5.0f) * 0.9f, 0, 0);
-		glTranslatef(0, (width / 5.0f) * 0.9f, 0);
-
-	}
-	else if (c == Object::BLACK) {
-		//cabeza del peón
-		glTranslatef(0, -width / 4, 0);
-		glutSolidSphere((width / 5.0f) * 0.9f, 50, 50);
-		glTranslatef(0, +width / 4, 0);
-
-		//cuerpo del peón
-
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef(0, (width / 5.0f) * 0.9f, 0);
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef((width / 5.0f) * 0.9f, 0, 0);
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef(0, (width / 10.0f) * 0.9f, 0);
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef(-(width / 5.0f) * 0.9f, 0, 0);
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef(-(width / 5.0f) * 0.9f, 0, 0);
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef(0, -(width / 10.0f) * 0.9f, 0);
-		glutSolidCube((width / 5.0f) * 0.9f);
-		glTranslatef((width / 5.0f) * 0.9f, 0, 0);
-		glTranslatef(0, -(width / 5.0f) * 0.9f, 0);
-
 	}
 }
 
