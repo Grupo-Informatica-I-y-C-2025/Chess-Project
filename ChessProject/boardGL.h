@@ -16,16 +16,31 @@ using namespace std;
 class BoardGL {
 
 public:
-	//custom
+	//reglas de movimiento
 	bool action = 0;
 	int src[2] = { -1,-1 }, dest[2] = { -1,-1 };
 	void activate();
 	void registerCall();
 	bool makeMove();
-	void doMove();
-	bool pawnMove();
+	void doMove(Object::type_t t);
 	void unselectAll();
 	void changeTurn();
+
+	//movimientos permitidos
+	bool pawnMove();
+	bool rookMove();
+	bool bishopMove();
+	bool knigthMove();
+	bool queenMove();
+	bool kingMove();
+
+	//Renders
+	void drawPawn(Object::color_t c);
+	void drawRook(Object::color_t c);
+	void drawBishop(Object::color_t c);
+	void drawKnigth(Object::color_t c);
+	void drawQueen(Object::color_t c);
+	void drawKing(Object::color_t c);
 
 	Object::color_t turn = Object::WHITE;//turno inicial
 
@@ -67,11 +82,6 @@ public:
 		cell_x = (int)(abs(y / width));
 		cell_y = (int)(x / width);
 	}
-
-
-	//Renders
-	void drawPawn(Object::color_t c);
-
 
 protected:
 	float width;
