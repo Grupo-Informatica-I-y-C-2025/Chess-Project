@@ -19,12 +19,17 @@ public:
 	//reglas de movimiento
 	bool action = 0;
 	int src[2] = { -1,-1 }, dest[2] = { -1,-1 };
+	int ky, kx;
 	void activate();
 	void registerCall();
 	bool makeMove();
-	void doMove(Object::type_t t);
+	void doMove();
 	void unselectAll();
 	void changeTurn();
+	void findKing(Object::color_t c);
+
+	bool scanChecks(Object::color_t c,int king_x, int king_y);
+	bool scanCheckMate(Object::color_t c);
 
 	//movimientos permitidos
 	bool pawnMove();
