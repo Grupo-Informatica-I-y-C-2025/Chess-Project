@@ -41,62 +41,109 @@ void BoardGL::registerCall() {
 
 bool BoardGL::makeMove() {
 	if (src[0] != -1 && src[1] != -1 && dest[0] != -1 && dest[1] != -1) {
+
+		
 		if ((m_board->getTab()[src[0]][src[1]].getColor() == m_board->getTab()[dest[0]][dest[1]].getColor()) && (m_board->getTab()[dest[0]][dest[1]].getColor() != Object::NONE))
 		{
 			return false;
 		}
-		else if (m_board->getTab()[src[0]][src[1]].getColor() == turn) {
-			switch (m_board->getTab()[src[0]][src[1]].getType())
-			{
-			case Object::PAWN:
-				pawnMove();
-				break;
+		else {
+			//cout << turn;
+			
+			if (m_board->getTab()[src[0]][src[1]].getColor() == turn ) {
+				/*if (turn == Object::WHITE) {
+					if (!scanChecks(turn, wkx, wky)) {
+						cout << "\n w check!";
+					}
+				}
+				else if (turn == Object::BLACK) {
+					if (!scanChecks(turn, bkx, bky)) {
+						cout << "\n b check!";
+					}
+				}*/
 
-			case Object::ROOK:
-				rookMove();
-				break;
+				switch (m_board->getTab()[src[0]][src[1]].getType())
+				{
+				case Object::PAWN:
+					if(pawnMove())doMove();
+					return true;
+					break;
 
-			case Object::BISHOP:
-				bishopMove();
-				break;
+				case Object::ROOK:
+					if (rookMove())doMove();
+					return true;
+					break;
 
-			case Object::KNIGTH:
-				knigthMove();
-				break;
+				case Object::BISHOP:
+					if(bishopMove())doMove();
+					return true;
+					break;
 
-			case Object::QUEEN:
-				queenMove();
-				break;
+				case Object::KNIGTH:
+					if(knigthMove())doMove();
+					return true;
+					break;
 
-			case Object::KING:
-				kingMove();
-				break;
+				case Object::QUEEN:
+					if(queenMove())doMove();
+					return true;
+					break;
 
-			case Object::EMPTY_CELL:
+				case Object::KING:
 
-				std::cout << "You do not have a piece there" << std::endl;
-				return false;
-				break;
+					if(kingMove())doMove();
+					return true;
+					break;
 
-			default:
+				case Object::EMPTY_CELL:
 
-				std::cerr << "Something went wrong in the switch statement in makeMove()" << std::endl;
-				return false;
-				break;
+					std::cout << "No deberías poder mover una casilla vacía " << std::endl;
+					return false;
+					break;
+
+				default:
+
+					std::cerr << "Ha ocurrido un error" << std::endl;
+					return false;
+					break;
+				}
 			}
 		}
 
 		//fin reset
-		src[0] = -1, src[1] = -1, dest[0] = -1, dest[1] = -1;
 		unselectAll();
 	}
 }
 
-void BoardGL::doMove(Object::type_t t) {
-	//mueve la pieza de src a dest, vac�a src y desactiva la acci�n
-	m_board->getTab()[dest[0]][dest[1]].setCell(dest[0], dest[1], t, m_board->getTab()[src[0]][src[1]].getColor());
+void BoardGL::doMove() {
+	//mueve la pieza de src a dest, vacía src y desactiva la acción
+	//findKing(turn);
+
+	//realiza el movimiento de forma virtual, si el movimiento resulta dejar al propio rey en jaque cancela el movimiento
+
+	//almacenamos los datos de la casilla de origen:
+
+	Object::type_t source_t = m_board->getTab()[src[0]][src[1]].getType(), destination_t = m_board->getTab()[dest[0]][dest[1]].getType();
+	Object::color_t source_c = m_board->getTab()[src[0]][src[1]].getColor(), destination_c = m_board->getTab()[dest[0]][dest[1]].getColor();
+	m_board->getTab()[dest[0]][dest[1]].setCell(dest[0], dest[1],source_t,source_c);
 	m_board->getTab()[src[0]][src[1]].setCell(src[0], src[1], Piece::EMPTY_CELL, Piece::NONE);
-	action = 0;
+
+	findKing(turn);
+	if (scanChecks(turn, kx, ky)) {
+		action = 0;
+		src[0] = -1, src[1] = -1, dest[0] = -1, dest[1] = -1;
+		changeTurn();
+		if (turn == Object::WHITE)cout << "\nwhites turn";
+		else cout << "\nblacks turn";
+	}
+	else {
+		//cout << "\n invalid move because result in check!";
+		m_board->getTab()[dest[0]][dest[1]].setCell(dest[0], dest[1], destination_t, destination_c);
+		m_board->getTab()[src[0]][src[1]].setCell(src[0], src[1], source_t, source_c);
+	}
+
+	
+	
 }
 
 void BoardGL::changeTurn() {
@@ -105,43 +152,34 @@ void BoardGL::changeTurn() {
 }
 
 bool BoardGL::pawnMove() {
+	bool valid = false;
 	if (m_board->getTab()[src[0]][src[1]].getColor() == Object::WHITE)
 	{
 		if ((src[1] == dest[1]) && (dest[0] == src[0] - 1) && (m_board->getTab()[dest[0]][dest[1]].getColor() == Object::NONE))
 		{
 			//movimiento recto
-			doMove(Object::PAWN);
-			changeTurn();
-			return true;
+			valid = true;
 		}
 		else if ((src[1] + 1 == dest[1] || src[1] - 1 == dest[1]) && src[0] - 1 == dest[0] && m_board->getTab()[dest[0]][dest[1]].getColor() == Object::BLACK)
 		{
 			//comida diagonal
-			doMove(Object::PAWN);
-			changeTurn();
-			return true;
+			valid = true;
 		}
-		else return false;
 	}
 	else if (m_board->getTab()[src[0]][src[1]].getColor() == Object::BLACK)
 	{
 		if (src[1] == dest[1] && dest[0] == src[0] + 1 && m_board->getTab()[dest[0]][dest[1]].getColor() == Object::NONE)
 		{
 			//movimiento recto
-			doMove(Object::PAWN);
-			changeTurn();
-			return true;
+			valid = true;
 		}
 		else if ((src[1] + 1 == dest[1] || src[1] - 1 == dest[1]) && src[0] + 1 == dest[0] && m_board->getTab()[dest[0]][dest[1]].getColor() == Object::WHITE)
 		{
 			//comida diagonal
-			doMove(Object::PAWN);
-			changeTurn();
-			return true;
+			valid = true;
 		}
-		else return false;
 	}
-	else return false;
+	return valid;
 }
 
 bool BoardGL::rookMove() {
@@ -156,7 +194,7 @@ bool BoardGL::rookMove() {
 				for (int i = src[0] - 1; i > dest[0]; i--)
 					if (m_board->getTab()[i][dest[1]].getColor() != Object::NONE)
 						valid = false;
-			else//Y+
+			if (yrange > 0)//Y+
 				for (int i = src[0] + 1; i < dest[0]; i++)
 					if (m_board->getTab()[i][dest[1]].getColor() != Object::NONE)
 						valid = false;
@@ -168,20 +206,14 @@ bool BoardGL::rookMove() {
 				for (int i = src[1] - 1; i > dest[1]; i--)
 					if (m_board->getTab()[dest[0]][i].getColor() != Object::NONE)
 						valid = false;
-			else//X+
+			if (xrange > 0)//X+
 				for (int i = src[1] + 1; i < dest[1]; i++)
 					if (m_board->getTab()[dest[0]][i].getColor() != Object::NONE)
 						valid = false;
 		}
 		else  valid = false;
 	}
-	if (valid)
-	{
-		doMove(Object::ROOK);
-		changeTurn();
-		return true;
-	}
-	else return false;
+	return valid;
 }
 
 bool BoardGL::bishopMove() {
@@ -197,26 +229,20 @@ bool BoardGL::bishopMove() {
 		}
 	}
 	else valid = false;
-	if (valid)
-	{
-		doMove(Object::BISHOP);
-		changeTurn();
-		return true;
-	}
-	else return false;
+	return valid;
 }
 
 bool BoardGL::knigthMove() {
+	bool valid ;
 	if ((abs(src[1] - dest[1]) == 2 && abs(src[0] - dest[0]) == 1) || (abs(src[1] - dest[1]) == 1 && abs(src[0] - dest[0]) == 2))
 	{
-		doMove(Object::KNIGTH);
-		changeTurn();
-		return true;
+		valid = true;
 	}
 	else
 	{
-		return false;
+		valid = false;
 	}
+	return valid;
 }
 
 bool BoardGL::queenMove() {
@@ -230,7 +256,7 @@ bool BoardGL::queenMove() {
 				for (int i = src[0] - 1; i > dest[0]; i--)
 					if (m_board->getTab()[i][dest[1]].getColor() != Object::NONE)
 						valid = false;
-			else//Y+
+			if (yrange > 0)//Y+
 				for (int i = src[0] + 1; i < dest[0]; i++)
 					if (m_board->getTab()[i][dest[1]].getColor() != Object::NONE)
 						valid = false;
@@ -242,7 +268,7 @@ bool BoardGL::queenMove() {
 				for (int i = src[1] - 1; i > dest[1]; i--)
 					if (m_board->getTab()[dest[0]][i].getColor() != Object::NONE)
 						valid = false;
-			else//X+
+			if (xrange > 0)//X+
 				for (int i = src[1] + 1; i < dest[1]; i++)
 					if (m_board->getTab()[dest[0]][i].getColor() != Object::NONE)
 						valid = false;
@@ -259,23 +285,158 @@ bool BoardGL::queenMove() {
 		}
 		else valid = false;
 	}
-	if (valid)
-	{
-		doMove(Object::QUEEN);
-		changeTurn();
-		return true;
-	}
-	else return false;
+	return valid;
 }
 
 bool BoardGL::kingMove() {
+	bool valid = false;
 	if ((abs(dest[1] - src[1]) == 1 || abs(dest[1] - src[1]) == 0)&&(abs(dest[0] - src[0]) == 1 || abs(dest[0] - src[0]) == 0))
 		if (abs(dest[0] - src[0]) + abs(dest[1] - src[1]) != 0)
 		{
-			doMove(Object::KING);
-			changeTurn();
-			return true;
+			valid = true;
 		}
-		else return false;
+	return valid;
+}
+
+bool BoardGL::scanChecks(Object::color_t c,int king_x,int king_y) {
+	bool check = false;
+	//check lineales
+	
+	
+	//Y-
+	for (int i = king_y -1; i > 0; i--) {
+		if (m_board->getTab()[i][king_x].getColor() != c && m_board->getTab()[i][king_x].getColor() != Object::NONE ) {
+			if (m_board->getTab()[i][king_x].getType() == Object::ROOK || m_board->getTab()[i][king_x].getType() == Object::QUEEN) {
+				check = true;
+				//cout << "\nfound attacking piece in y-";
+				break;
+			}
+		}
+		else if(m_board->getTab()[i][king_x].getColor() == c)break;
+		
+	}
+	//Y+
+	for (int i = king_y+1; i < N; i++) {
+		if (m_board->getTab()[i][king_x].getColor() != c && m_board->getTab()[i][king_x].getColor() != Object::NONE) {
+			if (m_board->getTab()[i][king_x].getType() == Object::ROOK || m_board->getTab()[i][king_x].getType() == Object::QUEEN) {
+				check = true; 
+				//cout << "\nfound attacking piece in y+";
+			}
+		}
+		else if (m_board->getTab()[i][king_x].getColor() == c)break;
+	}
+
+
+	//X-
+	for (int i = king_x -1; i > 0; i--) {
+		if (m_board->getTab()[king_y][i].getColor() != c && m_board->getTab()[king_y][i].getColor() != Object::NONE) {
+			if (m_board->getTab()[king_y][i].getType() == Object::ROOK || m_board->getTab()[king_y][i].getType() == Object::QUEEN) {
+				check = true;
+				//cout << "\nfound attacking piece in x-";
+			}
+		}
+		else if (m_board->getTab()[king_y][i].getColor() == c)break;
+	}		
+
+	//X+
+	for (int i = king_x +1; i < N; i++) {
+		if (m_board->getTab()[king_y][i].getColor() != c && m_board->getTab()[king_y][i].getColor() != Object::NONE) {
+			if (m_board->getTab()[king_y][i].getType() == Object::ROOK || m_board->getTab()[king_y][i].getType() == Object::QUEEN) {
+				check = true;
+				//cout << "\nfound attacking piece in x+";
+			}
+		}
+		else if (m_board->getTab()[king_y][i].getColor() == c)break;
+	}
+
+	//movimientos diagonales
+	/*int xIncrement = 1;
+	int yIncrement = 1;
+
+	if(!(king_x == N-1 ||king_y == N-1))for (int i = 1; i < N ; i++)
+	{
+		if (king_y + yIncrement * i < 0 || king_y + yIncrement * i >N)break;
+		if (king_x + xIncrement * i < 0 || king_x + xIncrement * i >N)break;
+		//cout<< "x, y " << king_y + yIncrement * i << " " << king_x + xIncrement * i;
+		if (m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getColor() != c && m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getColor() != Object::NONE) {
+			if (m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getType() == Object::BISHOP || m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getType() == Object::QUEEN) { 
+				check = false; 
+				cout << "\nfound attacking piece in x+ y+";
+			}
+
+		}
+		else if (m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getColor() == c)break;
+	}
+
+
+
+	xIncrement = 1;
+	yIncrement = -1;
+	if (!(king_x == N-1 || king_y == 0))for (int i = 1; i <  N ; i++)
+	{
+		if (king_y + yIncrement * i < 0 || king_y + yIncrement * i >N)break;
+		if (king_x + xIncrement * i < 0 || king_x + xIncrement * i >N)break;
+		cout << "\n" << king_y + yIncrement * i;
+		cout << " : " << king_x + xIncrement * i;
+		if (m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getColor() != c && m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getColor() != Object::NONE) {
+			if (m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getType() == Object::BISHOP || m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getType() == Object::QUEEN) {
+				check = false;
+				cout << "\nfound attacking piece in x+ y-";
+			}
+		}
+		else if (m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getColor() == c)break;
+	}
+	xIncrement = -1;
+	yIncrement = 1;
+	if (!(king_x == 0 || king_y == N-1))for (int i = 1; i < N ; i++)
+	{
+		if (king_y + yIncrement * i < 0 || king_y + yIncrement * i >N)break;
+		if (king_x + xIncrement * i < 0 || king_x + xIncrement * i >N)break;
+		if (m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getColor() != c && m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getColor() != Object::NONE) {
+			if (m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getType() == Object::BISHOP || m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getType() == Object::QUEEN) {
+				check = false;
+				cout << "\nfound attacking piece in x- y+";
+			}
+		}
+		else if (m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getColor() == c)break;
+	}
+	xIncrement = -1;
+	yIncrement = -1;
+	if (!(king_x == 0 || king_y == 0))for (int i = 1; i < N; i++)
+	{
+		if (king_y + yIncrement * i < 0 || king_y + yIncrement * i >N)break;
+		if (king_x + xIncrement * i < 0 || king_x + xIncrement * i >N)break;
+		if (m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getColor() != c && m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getColor() != Object::NONE) {
+			if (m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getType() == Object::BISHOP || m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getType() == Object::QUEEN) {
+				check = false;
+				cout << "\nfound attacking piece in x- y-";
+			}
+		}
+		else if (m_board->getTab()[king_y + yIncrement * i][king_x + xIncrement * i].getColor() == c)break;
+	}*/
+
+
+	return !check;
+}
+
+void BoardGL::findKing(Object::color_t c) {
+	bool found = false;
+	for (int i = 0; i < N; i++) {
+		for (int j = 0; j < N; j++) {
+			if (m_board->getTab()[i][j].getColor() == c && m_board->getTab()[i][j].getType() == Object::KING) {
+				found = true;
+				kx = j; ky = i;
+				//cout << "\nx y: " << kx << ky;
+				break;
+			}
+		}
+		if (found) { break; }
+	}
+}
+
+bool BoardGL::scanCheckMate(Object::color_t c) {
+	if (true) {
+		return true;
+	}
 	else return false;
 }
