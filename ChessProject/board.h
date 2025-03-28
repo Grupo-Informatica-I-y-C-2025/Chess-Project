@@ -1,9 +1,9 @@
-
 #ifndef __BOARD_H__
 #define __BOARD_H__
 
 #include <iostream>
 #include "piece.h"
+
 
 using namespace std;
 
@@ -37,16 +37,17 @@ public:
 		tab[7][2].setCell(7, 2, Piece::BISHOP, Piece::WHITE);
 		tab[7][5].setCell(7, 5, Piece::BISHOP, Piece::WHITE);
 
-		tab[0][1].setCell(0, 1, Piece::KNIGTH, Piece::BLACK);
-		tab[0][6].setCell(0, 6, Piece::KNIGTH, Piece::BLACK);
-		tab[7][1].setCell(7, 1, Piece::KNIGTH, Piece::WHITE);
-		tab[7][6].setCell(7, 6, Piece::KNIGTH, Piece::WHITE);
+		tab[0][1].setCell(0, 1, Piece::KNIGHT, Piece::BLACK);
+		tab[0][6].setCell(0, 6, Piece::KNIGHT, Piece::BLACK);
+		tab[7][1].setCell(7, 1, Piece::KNIGHT, Piece::WHITE);
+		tab[7][6].setCell(7, 6, Piece::KNIGHT, Piece::WHITE);
 
-		tab[7][4].setCell(7, 4, Piece::QUEEN, Piece::WHITE);
-		tab[0][4].setCell(0, 4, Piece::QUEEN, Piece::BLACK);
+		tab[7][3].setCell(7, 3, Piece::QUEEN, Piece::WHITE);
+		tab[0][3].setCell(0, 3, Piece::QUEEN, Piece::BLACK);
 
-		tab[7][3].setCell(7, 3, Piece::KING, Piece::WHITE);
-		tab[0][3].setCell(0, 3, Piece::KING, Piece::BLACK);
+		tab[7][4].setCell(7, 4, Piece::KING, Piece::WHITE);
+		tab[0][4].setCell(0, 4, Piece::KING, Piece::BLACK);
+
 
 	}
 
@@ -58,6 +59,38 @@ public:
 
 	int getSize() { return N; }
 	Piece** getTab() { return tab; }
+
+	//reglas de movimiento
+	void activate(int xcell_sel, int ycell_sel);
+	void registerCall(int xcell_sel, int ycell_sel);
+	bool makeMove();
+	bool scanCheckMate();
+
+	private:
+	bool action;
+	int src[2] = { -1,-1 }, dest[2] = { -1,-1 };
+	int ky, kx;
+	Object::color_t turn = Object::WHITE;//turno inicial
+
+	void doMove();
+	void unselectAll();
+	void changeTurn();
+	void findKing(Object::color_t c);
+
+	bool scanChecks(Object::color_t c);
+
+	void enPassant(int dy, int dx);
+	void cleanEnpassant(Object::color_t c);
+
+
+
+	//movimientos permitidos
+	bool pawnMove(int sy, int sx, int dy, int dx);
+	bool rookMove(int sy, int sx, int dy, int dx);
+	bool bishopMove(int sy, int sx, int dy, int dx);
+	bool knigthMove(int sy, int sx, int dy, int dx);
+	bool queenMove(int sy, int sx, int dy, int dx);
+	bool kingMove(int sy, int sx, int dy, int dx);
 };
 
 
