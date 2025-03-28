@@ -16,28 +16,7 @@ using namespace std;
 class BoardGL {
 
 public:
-	//reglas de movimiento
-	bool action = 0;
-	int src[2] = { -1,-1 }, dest[2] = { -1,-1 };
-	int ky, kx;
-	void activate();
-	void registerCall();
-	bool makeMove();
-	void doMove();
-	void unselectAll();
-	void changeTurn();
-	void findKing(Object::color_t c);
-
-	bool scanChecks(Object::color_t c,int king_x, int king_y);
-	bool scanCheckMate(Object::color_t c);
-
-	//movimientos permitidos
-	bool pawnMove();
-	bool rookMove();
-	bool bishopMove();
-	bool knigthMove();
-	bool queenMove();
-	bool kingMove();
+	
 
 	//Renders
 	void drawPawn(Object::color_t c);
@@ -46,8 +25,6 @@ public:
 	void drawKnigth(Object::color_t c);
 	void drawQueen(Object::color_t c);
 	void drawKing(Object::color_t c);
-
-	Object::color_t turn = Object::WHITE;//turno inicial
 
 	//define board 
 	BoardGL(Board* pb) :m_board(pb) {
