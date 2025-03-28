@@ -99,7 +99,7 @@ void BoardGL::DrawCell(int i, int j) {
 		glEnable(GL_LIGHTING);
 		break;
 
-	case Object::KNIGTH:
+	case Object::KNIGHT:
 		glDisable(GL_LIGHTING);
 
 		//Dibuja el alfil
@@ -157,6 +157,11 @@ void BoardGL::Draw() {
 	glLoadIdentity();
 	gluLookAt(center_x, center_y, dist, center_x, center_y, center_z, 0, 1, 0);
 	glEnable(GL_LIGHTING);
+
+
+	
+	////Activa movimiento
+	m_board->makeMove();
 
 	//Draws board and grid
 
@@ -225,23 +230,20 @@ void BoardGL::MouseButton(int x, int y, int button, bool down, bool sKey, bool c
 		midButton = down;
 	///////////////////////////
 
-		//***WRITE ACTIONS CONNECTED TO MOUSE STATE HERE
-
 	
 	if (down) {
 
-		////Regsitrar psoicion previa y final -- parte propia
-		registerCall();
+		if (!m_board->scanCheckMate()) {
+			////Regsitrar psoicion previa y final -- parte propia
+			m_board->registerCall( xcell_sel,  ycell_sel);
 
-		////Iniciar movimiento
-		activate();
+			////Iniciar movimiento
+			m_board->activate(xcell_sel, ycell_sel);
 
-		////Activa movimiento
-		
-		makeMove();
-
+		}
 	}
 }
+
 
 void BoardGL::KeyDown(unsigned char key) {
 	//////////////////
@@ -257,4 +259,5 @@ void BoardGL::KeyDown(unsigned char key) {
 		//if(N>=2) N--;
 	}
 }
+
 
