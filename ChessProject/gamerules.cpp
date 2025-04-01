@@ -139,14 +139,13 @@ void Board::doMove() {
 	getTab()[dest[0]][dest[1]].setCell(dest[0], dest[1],source_t,source_c);
 	getTab()[src[0]][src[1]].setCell(src[0], src[1], Piece::EMPTY_CELL, Piece::NONE);
 
-	if (!scanChecks(turn) && findKing(turn)) {
-		//cout<<"\nscore : "<<EvaluateGame();
+	if (!scanChecks(turn)    && findKing(turn)) {
+		cout << "\n" << !scanChecks(turn);
 		changeTurn();
 		if (turn == bot) {
 			int alpha = -10000, beta = 10000;
-			cout << "\nminmax :" << minimax(4,&alpha,&beta, true);
+			cout << "\nminmax :" << minimax(3,&alpha,&beta, true);
 		}
-
 	}
 	else {
 		getTab()[dest[0]][dest[1]].setCell(dest[0], dest[1], destination_t, destination_c);
@@ -372,15 +371,15 @@ bool Board::kingMove(int sy, int sx, int dy, int dx) {
 	return valid;
 }
 
-//parece que en los movimientos lineales y diagonales solo impide tener jaque piezas de su mismo color
-//**implementado correctamente la modificación del algoritmo
+//modificaciónl rango de movimientos rectos 
+//añadir que los reyes no se toquen
 
 bool Board::scanChecks(Object::color_t c) {
 	bool check = false;
 
 	findKing(c);
 	//movimientos lineales lineales
-	for (int i = ky -1; i > 0; i--) {//Y-
+	for (int i = ky -1; i >= 0; i--) {//Y-
 		if ( getTab()[i][kx].getColor() != c &&  getTab()[i][kx].getColor() != NONE && (getTab()[i][kx].getType() == ROOK || getTab()[i][kx].getType() == QUEEN)) 
 		{
 			check = true;
@@ -401,7 +400,7 @@ bool Board::scanChecks(Object::color_t c) {
 		
 		else if ( getTab()[i][kx].getColor() != NONE)break;
 	}
-	for (int i = kx -1; i > 0; i--) {//X-
+	for (int i = kx -1; i >= 0; i--) {//X-
 		if ( getTab()[ky][i].getColor() != c &&  getTab()[ky][i].getColor() != NONE && (getTab()[i][kx].getType() == ROOK || getTab()[i][kx].getType() == QUEEN)) 
 		{
 			check = true;
@@ -788,3 +787,4 @@ void Board::setBoard() {
 	tab[7][4].setCell(7, 4, Piece::KING, Piece::WHITE);
 	tab[0][4].setCell(0, 4, Piece::KING, Piece::BLACK);
 }
+
