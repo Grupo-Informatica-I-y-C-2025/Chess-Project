@@ -1,25 +1,25 @@
 #ifndef __BOARD_H__
 #define __BOARD_H__
 
-#include <iostream>
+#include <iostream>		//incluir librerias
 #include "piece.h"
 
-
 using namespace std;
-
+//creación de la clase tablero(board)
 class Board {
 
 protected:
 	
-	const int N;		//NxN board
+	const int N;		//tablero NxN
 	Piece** tab;
 
+//acceso público
 public:
 	Board(int n, bool i) :N(n), Kramnik(i) {
 
 		tab = new Piece * [N];
 		for (int i = 0; i < N; i++) {
-			tab[i] = new Piece[N];			//initially empty
+			tab[i] = new Piece[N];		//inicialmente vacío
 		}
 	
 	}
@@ -42,8 +42,9 @@ public:
 	void setBoard(/*game_type*/);
 
 
-	//funciones para implementar bot
-	//si la partida es con bot
+	//funciones para implementación del bot
+	//en caso de ser la partida con bot
+
 	Object::color_t player = Object::WHITE;
 	Object::color_t bot = Object::BLACK;
 
@@ -73,7 +74,7 @@ public:
 
 
 
-	//movimientos permitidos
+	//describimos los movimientos permitidos
 	bool pawnMove(int sy, int sx, int dy, int dx);
 	bool rookMove(int sy, int sx, int dy, int dx);
 	bool bishopMove(int sy, int sx, int dy, int dx);
