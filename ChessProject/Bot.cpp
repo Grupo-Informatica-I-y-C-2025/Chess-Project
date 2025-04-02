@@ -1,7 +1,7 @@
 #include "board.h"
 #include <iostream>
 #include <math.h>
-
+#include <stdio.h>
 
 #define PAWN Object::PAWN
 #define ROOK Object::ROOK
