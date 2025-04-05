@@ -1,4 +1,4 @@
-#include "board.h"
+#include "Game.h"
 #include <iostream>
 #include <math.h>
 
@@ -13,778 +13,459 @@
 #define BLACK Object::BLACK
 #define NONE Object::NONE
 
-
-void Board::unselectAll() {
+//mover a boardGL
+void Game::unselectAll() {
 	for (int i = 0; i < N; i++) {
-		for (int j = 0; j < N; j++) {
-			getTab()[i][j].unselectCell();
+		for (int j = 0; j < M; j++) {
+			board->getTab()[i][j].unselectCell();
 			action = 0;
 		}
 	}
 }
-
-void Board::activate( int xcell_sel, int ycell_sel)
+void Game::activate( int xcell_sel, int ycell_sel)
 {
 	////Activar casillas -- parte propia	
-	if ((xcell_sel>=0 && xcell_sel<N) && (ycell_sel >= 0 && ycell_sel < N)) {
-		if (getTab()[xcell_sel][ycell_sel].selected())
+	if ((xcell_sel >= 0 && xcell_sel < N) && (ycell_sel >= 0 && ycell_sel < N)) {
+		if (board->getTab()[xcell_sel][ycell_sel].selected())
 		{
-			getTab()[xcell_sel][ycell_sel].unselectCell();
+			board->getTab()[xcell_sel][ycell_sel].unselectCell();
 			action = 0;
 			src[0] = -1, src[1] = -1, dest[0] = -1, dest[1] = -1;
 		}
-		else if (getTab()[xcell_sel][ycell_sel].getColor() == turn)
+		else if (board->getTab()[xcell_sel][ycell_sel].getColor() == turn)
 		{
 			unselectAll();
-			getTab()[xcell_sel][ycell_sel].selectCell();
+			board->getTab()[xcell_sel][ycell_sel].selectCell();
 			action = 1;
 		}
 	}
 
 }
+void Game::registerCall(int xcell_sel, int ycell_sel) {
+	if ((xcell_sel >= 0 && xcell_sel < N) && (ycell_sel >= 0 && ycell_sel < N)) {
+		if (!action)
+		{
+			src[0] = xcell_sel, src[1] = ycell_sel;
+		}
+		else {
+			dest[0] = xcell_sel, dest[1] = ycell_sel;
+		}
+	}
+}
 
-void Board::registerCall(int xcell_sel, int ycell_sel) {
+
+
+//reorganizar las funciones de juego, limpiar
+board_piece Game::findPiece(int x, int y) {
+	board->listPieces();
+	for (const auto& p : board->board_pieces) {
+		if (x == p.x && y == p.y) {
+			return p;
+		}
+	}
+	board_piece null{ -1,-1 };
+	return null;
+}
+
+void Game::makeMove() {
+		
+	if (!scanCheckMate(turn) && turn == bot) {
+		auto botmove = botMove(turn);
+		src[0] = botmove.source.y ; src[1] = botmove.source.x ; dest[0]= botmove.destination.y ; dest[1] = botmove.destination.x ;
+		cout << "\n move:" << src[0] << src[1] << dest[0] << dest[1];
+	}
+
+	 board_piece piece = findPiece( src[1], src[0]);
+	if (piece.x != -1 && piece.y != -1 && dest[0] != -1 && dest[1] != -1) {
+		movement move = { piece,{dest[0],dest[1],board->getTab()[dest[0]][dest[1]].getColor(),board->getTab()[dest[0]][dest[1]].getType() } };
+		//cout << "\n move:" << piece.y << piece.x << dest[0] << dest[1];
+		if (piece.color == turn && board->isLegalmove(move) && doMove(board, move))changeTurn();
+		else { src[0] = dest[0]; src[1] = dest[1]; }
+		
+		dest[0] = -1, dest[1] = -1;
+		//cout << "\n coords:" << src[0] << src[1] << dest[0] << dest[1];
+	}
 	
-	if (!action)
-	{
-		src[0] = xcell_sel, src[1] = ycell_sel;
-	}
-	else {
-		dest[0] = xcell_sel, dest[1] = ycell_sel;
-	}
 }
+bool Game::doMove(Board* board,movement& move) {//
+	board_piece ep = enPassant(board, move);
+	board->getTab()[move.destination.y][move.destination.x].setCell(move.destination.y, move.destination.x, move.source.type,move.source.color);
+	board->getTab()[move.source.y][move.source.x].setCell(move.source.y, move.source.x, EMPTY_CELL, NONE);
+	
 
-bool Board::makeMove() {
-	if (scanCheckMate(turn))cout << "\n checkmate";
-	else {
-		if (src[0] != -1 && src[1] != -1 && dest[0] != -1 && dest[1] != -1 ) {
+	if (scanChecks(board,move.source.color)) {
+		//cout << "\nmove invalid because resulted in check";
+		//redo en passant
+		if(ep.x != -1 && ep.y != -1)board->getTab()[ep.y][ep.x].setCell(ep.y, ep.x, ep.type, ep.color);
 
-			if (getTab()[src[0]][src[1]].getColor() == turn) {
-
-				switch (getTab()[src[0]][src[1]].getType())
-				{
-				case PAWN:
-
-					//cout << "\nfound pawn";
-					if (pawnMove(src[0], src[1], dest[0], dest[1])) {
-						enPassant(dest[0], dest[1]);
-						doMove();
-					}
-					return true;
-					break;
-
-				case ROOK:
-
-					//cout << "\nfound rook";
-					if (rookMove(src[0], src[1], dest[0], dest[1]))doMove();
-					return true;
-					break;
-
-				case BISHOP:
-
-					//cout << "\nfound bishop";
-					if (bishopMove(src[0], src[1], dest[0], dest[1]))doMove();
-					return true;
-					break;
-
-				case KNIGHT:
-
-					//cout << "\nfound knigth";
-					if (knigthMove(src[0], src[1], dest[0], dest[1]))doMove();
-					return true;
-					break;
-
-				case QUEEN:
-
-					//cout << "\nfound queen";
-					if (queenMove(src[0], src[1], dest[0], dest[1]))doMove();
-					return true;
-					break;
-
-				case KING:
-
-					//cout << "\nfound king";
-					if (kingMove(src[0], src[1], dest[0], dest[1]))doMove();
-					return true;
-					break;
-
-
-				case EMPTY_CELL:
-
-					std::cout << "No deberías poder mover una casilla vacía (ver funcion activate) " << std::endl;
-					return false;
-					break;
-
-				default:
-
-					std::cerr << "Ha ocurrido un error" << std::endl;
-					return false;
-					break;
-				}
-			}
-		}
+		board->getTab()[move.destination.y][move.destination.x].setCell(move.destination.y, move.destination.x, move.destination.type, move.destination.color);
+		board->getTab()[move.source.y][move.source.x].setCell(move.source.y, move.source.x, move.source.type, move.source.color);
+		board->listPieces();
+		return false;
 	}
+	return true;
 }
-
-void Board::doMove() {
-	//mueve la pieza de src a dest, vacía src y desactiva la acción
-	//findKing(turn);
-
-	//realiza el movimiento de forma virtual, si el movimiento resulta dejar al propio rey en jaque cancela el movimiento
-
-	//almacenamos los datos de la casilla de origen:
-
-	Object::type_t source_t = getTab()[src[0]][src[1]].getType(), destination_t = getTab()[dest[0]][dest[1]].getType();
-	Object::color_t source_c = getTab()[src[0]][src[1]].getColor(), destination_c = getTab()[dest[0]][dest[1]].getColor();
-	getTab()[dest[0]][dest[1]].setCell(dest[0], dest[1],source_t,source_c);
-	getTab()[src[0]][src[1]].setCell(src[0], src[1], Piece::EMPTY_CELL, Piece::NONE);
-
-	if (!scanChecks(turn)    && findKing(turn)) {
-		cout << "\n" << !scanChecks(turn);
-		changeTurn();
-		if (turn == bot) {
-			int alpha = -10000, beta = 10000;
-			cout << "\nminmax :" << minimax(3,&alpha,&beta, true);
-		}
-	}
-	else {
-		getTab()[dest[0]][dest[1]].setCell(dest[0], dest[1], destination_t, destination_c);
-		getTab()[src[0]][src[1]].setCell(src[0], src[1], source_t, source_c);
-	}
-}
-
-void Board::changeTurn() {//referencia a cambiar de turno o traer turno <aqui
+void Game::changeTurn() {//referencia a cambiar de turno o traer turno <aqui
 
 	if (turn == BLACK)turn = WHITE;
 	else turn = BLACK;
 
 	if (!scanCheckMate(turn)) {
-		if (scanChecks(turn)) {
+		if (scanChecks(board, turn)) {
 			cout << "\n check!";
 		}
-		if (turn == WHITE)cout << "\nwhites turn";
-		else cout << "\nblacks turn";
-	}
+		if (turn == WHITE)cout << "\nwhites turn score:   "<<EvaluateGame(board);
+		else cout << "\nblacks turn score:   " << EvaluateGame(board);
+	}else{ cout << "\n checkmate"; }
 
 	
 
 	//reset
-	cleanEnpassant(turn);
+	cleanEnpassant(board);
 	action = 0;
 	unselectAll();
-	src[0] = -1, src[1] = -1, dest[0] = -1, dest[1] = -1;
 }
 
-bool Board::pawnMove(int sy,int sx, int dy,int dx) {
-	bool valid = false;
-	if ((getTab()[sy][sx].getColor() == getTab()[dy][dx].getColor()) && (getTab()[dy][dx].getColor() != NONE) && !isKramnik())
-	{
-		valid = false;
-	}
-	else {
-		if (getTab()[sy][sx].getColor() == WHITE)
-		{
-			if ((sy == 6) && (sx == dx) && (dy == sy - 2) && (getTab()[dy][dx].getColor() == NONE) && getTab()[dy+1][dx].getColor() == NONE) {
-				
-				//aquí hay que insertar un flag para el en passant
-				getTab()[dy+1][dx].setFlag(dy+1, dx, Object::WHITE_EP);
-				valid = true;
-			}
-			else if ((sx == dx) && (dy == sy - 1) && (getTab()[dy][dx].getColor() == NONE))
-			{
-				//movimiento recto
-				valid = true;
-			}
-			else if ((sx + 1 == dx || sx - 1 == dx) && sy - 1 == dy && (getTab()[dy][dx].getColor() == BLACK || getTab()[dy][dx].getFlag() == Object::BLACK_EP))
-			{
-				//comida diagonal
-				
-				valid = true;
-			}
+
+board_piece Game::enPassant(Board* board,const movement& pawn) {//
+	if (board->getTab()[pawn.source.y][pawn.source.x].getType() == PAWN) {
+		if ((pawn.source.y == board->getSizeY() - 2) && (pawn.source.x == pawn.destination.x) && (pawn.destination.y == pawn.source.y - 2) /*&& (pawn.destination.color == NONE)  && board->getTab()[pawn.destination.y + 1][pawn.destination.x].getColor() == NONE*/) {
+			//aquí hay que insertar un flag para el en passant
+			board->getTab()[pawn.destination.y + 1][pawn.destination.x].setFlag(pawn.destination.y + 1, pawn.destination.x, Object::WHITE_EP);
 		}
-		else if (getTab()[sy][sx].getColor() == BLACK)
-		{
-			if ((sy == 1) && (sx == dx) && (dy == sy + 2) && (getTab()[dy][dx].getColor() == NONE) && (getTab()[dy -1][dx].getColor() == NONE)) {
-				
-				//aquí hay que insertar un flag para el en passant
-				getTab()[dy - 1][dx].setFlag(dy - 1, dx, Object::BLACK_EP);
-				valid = true;
-			}
-			else if (sx == dx && dy == sy + 1 && getTab()[dy][dx].getColor() == NONE)
-			{
-				//movimiento recto
-				valid = true;
-			}
-			else if ((sx + 1 == dx || sx - 1 == dx) && sy + 1 == dy && (getTab()[dy][dx].getColor() == WHITE || getTab()[dy][dx].getFlag() == Object::WHITE_EP))
-			{
-				//comida diagonal
-				valid = true;
-			}
+		else if ((pawn.source.y == 1) && (pawn.source.x == pawn.destination.x) && (pawn.destination.y == pawn.source.y + 2) /* && (pawn.destination.color == NONE) && (getTab()[pawn.destination.y - 1][pawn.destination.x].getColor() == NONE)*/) {
+			//aquí hay que insertar un flag para el en passant
+			board->getTab()[pawn.destination.y - 1][pawn.destination.x].setFlag(pawn.destination.y - 1, pawn.destination.x, Object::BLACK_EP);
 		}
+		if (board->getTab()[pawn.destination.y][pawn.destination.x].getFlag() == Object::WHITE_EP) {
+			board_piece ep = { pawn.destination.y - 1, pawn.destination.x , board->getTab()[pawn.destination.y-1][pawn.destination.x].getColor(), board->getTab()[pawn.destination.y-1][pawn.destination.x].getType() };
+			board->getTab()[pawn.destination.y - 1][pawn.destination.x].setCell(pawn.destination.y - 1, pawn.destination.x, EMPTY_CELL, NONE);
+			return  ep ;
+		}
+		if (board->getTab()[pawn.destination.y][pawn.destination.x].getFlag() == Object::BLACK_EP) {
+			board_piece ep = { pawn.destination.y + 1, pawn.destination.x , board->getTab()[pawn.destination.y + 1][pawn.destination.x].getColor(), board->getTab()[pawn.destination.y+1][pawn.destination.x].getType() };
+			board->getTab()[pawn.destination.y + 1][pawn.destination.x].setCell(pawn.destination.y + 1, pawn.destination.x, EMPTY_CELL, NONE);
+			return ep;
+		}
+		return pawn.source;
 	}
-	return valid;
+	board_piece null{ -1,-1 };
+	return null;
 }
 
-bool Board::rookMove(int sy, int sx, int dy, int dx) {
-	bool valid = true;
-	if (( getTab()[sy][sx].getColor() ==  getTab()[dy][dx].getColor()) && ( getTab()[dy][dx].getColor() != NONE) && !isKramnik())
-	{
-		valid = false;
+void  Game::unPassant(Board* board, const movement& pawn, const board_piece& ep) {//
+	if (ep.x != -1 && ep.y != -1)board->getTab()[ep.y][ep.x].setCell(ep.y, ep.x, ep.type, ep.color);
+	if ((pawn.source.y == board->getSizeY() - 2) && (pawn.source.x == pawn.destination.x) && (pawn.destination.y == pawn.source.y - 2) /*&& (pawn.destination.color == NONE)  && board->getTab()[pawn.destination.y + 1][pawn.destination.x].getColor() == NONE*/) {
+		//aquí hay que insertar un flag para el en passant
+		board->getTab()[pawn.destination.y + 1][pawn.destination.x].setFlag(pawn.destination.y + 1, pawn.destination.x, Object::NO_FLAG);
 	}
-	else
-	if (sx != dx || sy != dy)//movimientos lineales
-	{
-
-		if (sx == dx)// movimiento en X
-		{
-			int yrange = dy - sy;//Y
-			if (yrange < 0)//Y-
-				for (int i = sy - 1; i > dy; i--)
-					if ( getTab()[i][dx].getColor() != NONE)
-						valid = false;
-			if (yrange > 0)//Y+
-				for (int i = sy + 1; i < dy; i++)
-					if ( getTab()[i][dx].getColor() != NONE)
-						valid = false;
-		}
-		else if (sy == dy)//movimiento en Y
-		{
-			int xrange = dx - sx;//X-
-			if (xrange < 0)
-				for (int i = sx - 1; i > dx; i--)
-					if ( getTab()[dy][i].getColor() != NONE)
-						valid = false;
-			if (xrange > 0)//X+
-				for (int i = sx + 1; i < dx; i++)
-					if ( getTab()[dy][i].getColor() != NONE)
-						valid = false;
-		}
-		else  valid = false;
+	else if ((pawn.source.y == 1) && (pawn.source.x == pawn.destination.x) && (pawn.destination.y == pawn.source.y + 2) /* && (pawn.destination.color == NONE) && (getTab()[pawn.destination.y - 1][pawn.destination.x].getColor() == NONE)*/) {
+		//aquí hay que insertar un flag para el en passant
+		board->getTab()[pawn.destination.y - 1][pawn.destination.x].setFlag(pawn.destination.y - 1, pawn.destination.x, Object::NO_FLAG);
 	}
-	return valid;
 }
 
-bool Board::bishopMove(int sy, int sx, int dy, int dx) {
-	bool valid = true;
-	if (( getTab()[sy][sx].getColor() ==  getTab()[dy][dx].getColor()) && ( getTab()[dy][dx].getColor() != NONE) && !isKramnik())
-	{
-		valid = false;
-	}
-	else {
-		if (abs(sx - dx) == abs(sy - dy))//movimientos diagonales
-		{
-			int xIncrement = (dx - sx) / (abs(dx - sx));
-			int yIncrement = (dy - sy) / (abs(dy - sy));
-			for (int i = 1; i < abs(sx - dx); i++)
-			{
-				if ( getTab()[sy + yIncrement * i][sx + xIncrement * i].getColor() != NONE)
-					valid = false;
-			}
-		}
-		else valid = false;
-	}
-	return valid;
-}
-
-bool Board::knigthMove(int sy, int sx, int dy, int dx) {
-	bool valid ;
-	if (( getTab()[sy][sx].getColor() ==  getTab()[dy][dx].getColor()) && ( getTab()[dy][dx].getColor() != NONE) && !isKramnik())
-	{
-		valid = false;
-	}
-	else {
-		if ((abs(sx - dx) == 2 && abs(sy - dy) == 1) || (abs(sx - dx) == 1 && abs(sy - dy) == 2))
-		{
-			valid = true;
-		}
-		else
-		{
-			valid = false;
-		}
-	}
-	return valid;
-}
-
-bool Board::queenMove(int sy, int sx, int dy, int dx) {
-	bool valid = true;
-	if (( getTab()[sy][sx].getColor() ==  getTab()[dy][dx].getColor()) && ( getTab()[dy][dx].getColor() != NONE) && !isKramnik())
-	{
-		valid = false;
-	}
-	else
-	if (sx != dx || sy != dy)//movimientos lineales
-	{
-		if (sx == dx)// movimiento en X
-		{
-			int yrange = dy - sy;//Y
-			if (yrange < 0)//Y-
-				for (int i = sy - 1; i > dy; i--)
-					if ( getTab()[i][dx].getColor() != NONE)
-						valid = false;
-			if (yrange > 0)//Y+
-				for (int i = sy + 1; i < dy; i++)
-					if ( getTab()[i][dx].getColor() != NONE)
-						valid = false;
-		}
-		else if (sy == dy)//movimiento en Y
-		{
-			int xrange = dx - sx;//X-
-			if (xrange < 0)
-				for (int i = sx - 1; i > dx; i--)
-					if ( getTab()[dy][i].getColor() != NONE)
-						valid = false;
-			if (xrange > 0)//X+
-				for (int i = sx + 1; i < dx; i++)
-					if ( getTab()[dy][i].getColor() != NONE)
-						valid = false;
-		}
-		else if (abs(sx - dx) == abs(sy - dy))//movimientos diagonales
-		{
-			int xIncrement = (dx - sx) / (abs(dx - sx));
-			int yIncrement = (dy - sy) / (abs(dy - sy));
-			for (int i = 1; i < abs(sx - dx); i++)
-			{
-				if ( getTab()[sy + yIncrement * i][sx + xIncrement * i].getColor() !=NONE)
-					valid = false;
-			}
-		}
-		else valid = false;
-	}
-	return valid;
-}
-
-bool Board::kingMove(int sy, int sx, int dy, int dx) {
-	bool valid = false;
-	if (( getTab()[sy][sx].getColor() ==  getTab()[dy][dx].getColor()) && ( getTab()[dy][dx].getColor() != NONE) && !isKramnik())
-	{
-		valid = false;
-	}
-	else {
-		if ((abs(dx - sx) == 1 || abs(dx - sx) == 0) && (abs(dy - sy) == 1 || abs(dy - sy) == 0)) {
-			if (abs(dy - sy) + abs(dx - sx) != 0)
-			{
-				valid = true;
-			}
-		}
-		else valid = false;
-	}
-	return valid;
-}
-
-//modificaciónl rango de movimientos rectos 
-//añadir que los reyes no se toquen
-
-bool Board::scanChecks(Object::color_t c) {
-	bool check = false;
-
-	findKing(c);
-	//movimientos lineales lineales
-	for (int i = ky -1; i >= 0; i--) {//Y-
-		if ( getTab()[i][kx].getColor() != c &&  getTab()[i][kx].getColor() != NONE && (getTab()[i][kx].getType() == ROOK || getTab()[i][kx].getType() == QUEEN)) 
-		{
-			check = true;
-			//cout << "\nfound attacking piece in y-";
-			break;
-		}
-		
-		else if( getTab()[i][kx].getColor() != NONE)break;
-		
-	}
-	for (int i = ky+1; i < N; i++) {//Y+
-		if ( getTab()[i][kx].getColor() != c &&  getTab()[i][kx].getColor() != NONE && (getTab()[i][kx].getType() == ROOK || getTab()[i][kx].getType() == QUEEN)) 
-		{
-			check = true;
-			//cout << "\nfound attacking piece in y+";
-			break;
-		}
-		
-		else if ( getTab()[i][kx].getColor() != NONE)break;
-	}
-	for (int i = kx -1; i >= 0; i--) {//X-
-		if ( getTab()[ky][i].getColor() != c &&  getTab()[ky][i].getColor() != NONE && (getTab()[i][kx].getType() == ROOK || getTab()[i][kx].getType() == QUEEN)) 
-		{
-			check = true;
-			//cout << "\nfound attacking piece in x-";
-			break;
-		}
-		else if ( getTab()[ky][i].getColor() != NONE)break;
-	}		
-	for (int i = kx +1; i < N; i++) {//X+
-		if ( getTab()[ky][i].getColor() != c &&  getTab()[ky][i].getColor() != NONE && (getTab()[i][kx].getType() == ROOK || getTab()[i][kx].getType() == QUEEN)) 
-		{
-			check = true;
-			//cout << "\nfound attacking piece in x+";
-			break;
-		}
-		else if ( getTab()[ky][i].getColor() != NONE)break;
-	}
-
-	//movimientos diagonales
-	int xIncrement = 1;
-	int yIncrement = 1;
-	for (int i = 1; i < N ; i++)
-	{
-		if (ky + yIncrement * i < 0 || ky + yIncrement * i >N-1)break;
-		if (kx + xIncrement * i < 0 || kx + xIncrement * i >N-1)break;
-		//cout<< "x, y " << ky + yIncrement * i << " " << kx + xIncrement * i;
-		if ( getTab()[ky + yIncrement * i][kx + xIncrement * i].getColor() != c &&  getTab()[ky + yIncrement * i][kx + xIncrement * i].getColor() != NONE && (getTab()[ky + yIncrement * i][kx + xIncrement * i].getType() == BISHOP || getTab()[ky + yIncrement * i][kx + xIncrement * i].getType() == QUEEN)) 
-		{
-			check = true; 
-			break;
-		}
-		else if ( getTab()[ky + yIncrement * i][kx + xIncrement * i].getColor() != NONE)break;
-	}
-	xIncrement = 1;
-	yIncrement = -1;
-	for (int i = 1; i <  N ; i++)
-	{
-		if (ky + yIncrement * i < 0 || ky + yIncrement * i >N-1)break;
-		if (kx + xIncrement * i < 0 || kx + xIncrement * i >N-1)break;
-		if ( getTab()[ky + yIncrement * i][kx + xIncrement * i].getColor() != c &&  getTab()[ky + yIncrement * i][kx + xIncrement * i].getColor() != NONE && (getTab()[ky + yIncrement * i][kx + xIncrement * i].getType() == BISHOP || getTab()[ky + yIncrement * i][kx + xIncrement * i].getType() == QUEEN))
-		{
-			check = true;
-			break;
-		}
-		else if ( getTab()[ky + yIncrement * i][kx + xIncrement * i].getColor() != NONE)break;
-	}
-	xIncrement = -1;
-	yIncrement = 1;
-	for (int i = 1; i < N ; i++)
-	{
-		if (ky + yIncrement * i < 0 || ky + yIncrement * i >N-1)break;
-		if (kx + xIncrement * i < 0 || kx + xIncrement * i >N-1)break;
-		if ( getTab()[ky + yIncrement * i][kx + xIncrement * i].getColor() != c &&  getTab()[ky + yIncrement * i][kx + xIncrement * i].getColor() != NONE && (getTab()[ky + yIncrement * i][kx + xIncrement * i].getType() == BISHOP || getTab()[ky + yIncrement * i][kx + xIncrement * i].getType() == QUEEN))
-		{
-			check = true;
-			break;
-		}
-		else if ( getTab()[ky + yIncrement * i][kx + xIncrement * i].getColor() != NONE)break;
-	}
-	xIncrement = -1;
-	yIncrement = -1;
-	for (int i = 1; i < N; i++)
-	{
-		if (ky + yIncrement * i < 0 || ky + yIncrement * i >N-1)break;
-		if (kx + xIncrement * i < 0 || kx + xIncrement * i >N-1)break;
-		if ( getTab()[ky + yIncrement * i][kx + xIncrement * i].getColor() != c &&  getTab()[ky + yIncrement * i][kx + xIncrement * i].getColor() != NONE && (getTab()[ky + yIncrement * i][kx + xIncrement * i].getType() == BISHOP || getTab()[ky + yIncrement * i][kx + xIncrement * i].getType() == QUEEN))
-		{
-			check = true;
-			break;
-		}
-		else if ( getTab()[ky + yIncrement * i][kx + xIncrement * i].getColor() != NONE)break;
-	}
-
-	//movimientos de caballos
+void Game::cleanEnpassant(Board* board) {
 	for (int i = 0; i < N; i++) {
-		for (int j = 0; j < N; j++) {
-			if( getTab()[i][j].getColor() != c &&  getTab()[i][j].getColor() != NONE &&   getTab()[i][j].getType() == KNIGHT)
-			if ((abs(j - kx) == 2 && abs(i - ky) == 1) || (abs(j - kx) == 1 && abs(i - ky) == 2))
-			{
-				check = true;
-			}
-		}
-		if (check) { break; }
-	}
-	
-	//movimientos de peones
-	if (c == WHITE) {
-		if(ky - 1 >= 0 && ky - 1 < N && kx - 1 >= 0 && kx - 1 < N)
-			if ( getTab()[ky-1][kx-1].getType() == PAWN &&  getTab()[ky - 1][kx - 1].getColor() == BLACK)
-				check =true;
-		if (ky - 1 >= 0 && ky - 1 < N && kx + 1 >= 0 && kx + 1 < N)
-			if ( getTab()[ky - 1][kx + 1].getType() == PAWN &&  getTab()[ky - 1][kx + 1].getColor() == BLACK)
-				check = true;
-	}
-	if (c == BLACK) {
-		if (ky + 1 >= 0 && ky + 1 < N && kx - 1 >= 0 && kx - 1 < N)
-			if ( getTab()[ky + 1][kx - 1].getType() ==  PAWN &&  getTab()[ky + 1][kx - 1].getColor() ==  	WHITE)
-				check = true;
-		if (ky + 1 >= 0 && ky + 1 < N && kx + 1 >= 0 && kx + 1 < N)
-			if ( getTab()[ky + 1][kx + 1].getType() ==  PAWN &&  getTab()[ky + 1][kx + 1].getColor() ==  WHITE)
-				check = true;
-	}
-
-	return check;
-}
-
-bool Board::findKing(Object::color_t c) {
-	bool found = false;
-	for (int i = 0; i < N; i++) {
-		for (int j = 0; j < N; j++) {
-			if ( getTab()[i][j].getColor() == c &&  getTab()[i][j].getType() ==  KING) {
-				found = true;
-				kx = j; ky = i;
-				break;
-			}
-		}
-		if (found) { break; }
-	}
-	return found;
-}
-  
-bool Board::scanCheckMate(Object::color_t turn) {
-	bool checkmate = true;
-	for (int i = 0; i < N; i++) {//busca todas las piezas del color del turno en el tablero
-		
-		for (int j = 0; j < N; j++) {
-			
-			if ( getTab()[i][j].getColor() == turn) {
-
-				//escanea todos los movimientos de esa pieza
-				//para ver si de entre los movimientos validos alguno impide que se produzca un jaque en el siguiente turno
-				//si encuentra una solución se rompe el bucle para no calcular el resto
-				switch ( getTab()[i][j].getType())
-				{
-				case  PAWN:
-
-					for (int k = 0; k < N; k++) {
-						for (int l = 0; l < N; l++) {
-							if ( getTab()[k][l].getColor() != turn && pawnMove(i, j, k, l)) {//no propia pieza y movimiento valido de peon
-								bool b_ep = false;
-								bool w_ep = false;
-								Object::type_t w_ep_t, b_ep_t;
-								Object::color_t w_ep_c, b_ep_c;
-								//añadir en passant
-								auto destination_t =  getTab()[k][l].getType();
-								auto destination_c =  getTab()[k][l].getColor();
-								//almacenar en passant
-								if (k - 1 >= 0) {
-									 w_ep_t = getTab()[k - 1][l].getType();
-									 w_ep_c = getTab()[k - 1][l].getColor();
-								}
-								
-								if (k + 1 < N) {
-									b_ep_t = getTab()[k + 1][l].getType();
-									b_ep_c = getTab()[k + 1][l].getColor();
-								}
-								
-
-								if (getTab()[k][l].getFlag() == Object::WHITE_EP) {
-									w_ep = true;
-									getTab()[k-1][l].setCell(k-1, l, EMPTY_CELL, NONE);
-								}
-								if (getTab()[k][l].getFlag() == Object::BLACK_EP) {
-									b_ep = true;
-									getTab()[k + 1][l].setCell(k + 1, l, EMPTY_CELL, NONE);
-								}
-
-								 getTab()[k][l].setCell(k, l,  PAWN, turn);//dest
-								 getTab()[i][j].setCell(i, j,  EMPTY_CELL,  NONE);//src
-
-								//check if result in checkmate 
-								if (!scanChecks(turn) && findKing(turn)) {
-									//cout << "\n not checkmate in :"<< i << " . " << j << "  to  " << k << " . " << l;
-									checkmate = false;
-								}
-								//undo
-								 getTab()[k][l].setCell(k, l, destination_t, destination_c);//dest
-								 getTab()[i][j].setCell(i , j ,  PAWN, turn);//src
-
-								if (w_ep) {
-									 getTab()[k - 1][l].setCell(k - 1, l, w_ep_t, w_ep_c);
-								 }
-								 if (b_ep) {
-									 getTab()[k + 1][l].setCell(k + 1, l, b_ep_t, b_ep_c);
-								 }
-
-								 //clear generated en passant flags
-								 if (abs(i-k)==2 && turn == WHITE)getTab()[k+1][l].setFlag(k+1, l, Object::NO_FLAG);
-								 if (abs(i - k) == 2 && turn == BLACK)getTab()[k-1][l].setFlag(k - 1, l, Object::NO_FLAG);	
-							}
-						}
-					}
-					break;
-
-				case  ROOK:
-
-					for (int k = 0; k < N; k++) {
-						for (int l = 0; l < N; l++) {
-							if ( getTab()[k][l].getColor() != turn && rookMove(i, j, k, l)) {//no propia pieza y movimiento valido de peon
-								
-								auto destination_t =  getTab()[k][l].getType();
-								Object::color_t destination_c =  getTab()[k][l].getColor();
-								 getTab()[k][l].setCell(k, l,  ROOK, turn);//dest
-								 getTab()[i][j].setCell(i, j,  EMPTY_CELL,  NONE);//src
-
-								//check if result in checkmate 
-								if (!scanChecks(turn) && findKing(turn)) {
-									//cout << "\n not checkmate in rook:" << i << " . " << j << "  to  " << k << " . " << l;
-									checkmate = false;
-								}
-								//undo
-								 getTab()[k][l].setCell(k, l, destination_t, destination_c);//dest
-								 getTab()[i][j].setCell(i, j,  ROOK, turn);//src
-							}
-						}
-					}
-					break;
-
-				case  BISHOP:
-
-					for (int k = 0; k < N; k++) {
-						for (int l = 0; l < N; l++) {
-							if ( getTab()[k][l].getColor() != turn && bishopMove(i, j, k, l)) {//no propia pieza y movimiento valido de peon
-								
-								auto destination_t =  getTab()[k][l].getType();
-								Object::color_t destination_c =  getTab()[k][l].getColor();
-								 getTab()[k][l].setCell(k, l,  BISHOP, turn);//dest
-								 getTab()[i][j].setCell(i, j,  EMPTY_CELL,  NONE);//src
-
-								//check if result in checkmate 
-								if (!scanChecks(turn) && findKing(turn)) {
-									//cout << "\n not checkmate in bishop:" << i << " . " << j << "  to  " << k << " . " << l;
-									checkmate = false;
-								}
-								//undo
-								 getTab()[k][l].setCell(k, l, destination_t, destination_c);//dest
-								 getTab()[i][j].setCell(i, j,  BISHOP, turn);//src
-							}
-						}
-					}
-					break;
-
-				case  KNIGHT:
-
-					for (int k = 0; k < N; k++) {
-						for (int l = 0; l < N; l++) {
-							if ( getTab()[k][l].getColor() != turn && knigthMove(i, j, k, l)) {//no propia pieza y movimiento valido de peon
-								
-								auto destination_t =  getTab()[k][l].getType();
-								Object::color_t destination_c =  getTab()[k][l].getColor();
-								 getTab()[k][l].setCell(k, l,  KNIGHT, turn);//dest
-								 getTab()[i][j].setCell(i, j,  EMPTY_CELL,  NONE);//src
-
-								//check if result in checkmate 
-								if (!scanChecks(turn) && findKing(turn)) {
-									//cout << "\n not checkmate in knigth:" << i << " . " << j << "  to  " << k << " . " << l;
-									checkmate = false;
-								}
-								//undo
-								 getTab()[k][l].setCell(k, l, destination_t, destination_c);//dest
-								 getTab()[i][j].setCell(i, j,  KNIGHT, turn);//src
-							}
-						}
-					}
-					break;
-
-				case  QUEEN:
-
-					for (int k = 0; k < N; k++) {
-						for (int l = 0; l < N; l++) {
-							if ( getTab()[k][l].getColor() != turn && queenMove(i, j, k, l)) {//no propia pieza y movimiento valido de peon
-								
-								auto destination_t =  getTab()[k][l].getType();
-								Object::color_t destination_c =  getTab()[k][l].getColor();
-								 getTab()[k][l].setCell(k, l,  QUEEN, turn);//dest
-								 getTab()[i][j].setCell(i, j,  EMPTY_CELL,  NONE);//src
-
-								//check if result in checkmate 
-								if (!scanChecks(turn) && findKing(turn)) {
-									//cout << "\n not checkmate in queen:" << i << " . " << j << "  to  " << k << " . " << l;
-									checkmate = false;
-								}
-								//undo
-								 getTab()[k][l].setCell(k, l, destination_t, destination_c);//dest
-								 getTab()[i][j].setCell(i, j,  QUEEN, turn);//src
-							}
-						}
-					}
-					break;
-
-				case  KING:
-
-					for (int k = 0; k < N; k++) {
-						for (int l = 0; l < N; l++) {
-							if ( getTab()[k][l].getColor() != turn && kingMove(i, j, k, l)) {//no propia pieza y movimiento valido de peon
-								
-								auto destination_t =  getTab()[k][l].getType();
-								Object::color_t destination_c =  getTab()[k][l].getColor();
-								 getTab()[k][l].setCell(k, l,  KING, turn);//dest
-								 getTab()[i][j].setCell(i, j,  EMPTY_CELL,  NONE);//src
-
-								//check if result in checkmate 
-								if (!scanChecks(turn) && findKing(turn)) {
-									//cout << "\n not checkmate in king:" << i << " . " << j << "  to  " << k << " . " << l;
-									checkmate = false;
-								}
-								//undo
-								 getTab()[k][l].setCell(k, l, destination_t, destination_c);//dest
-								 getTab()[i][j].setCell(i, j,  KING, turn);//src
-							}
-						}
-					}
-					break;
-
-				case  EMPTY_CELL:
-
-					std::cout << "Si la casilla esta vacía no debería llegar aqui" << std::endl;
-					return false;
-					break;
-
-				default:
-
-					std::cerr << "Ha ocurrido un error" << std::endl;
-					return false;
-					break;
+		for (int j = 0; j < M; j++) {
+			if (turn == WHITE && board->getTab()[i][j].getFlag() == Object::WHITE_EP) {
+					board->getTab()[i][j].setFlag(i, j, Object::NO_FLAG);
+					//break;
+				}
+			if (turn == BLACK && board->getTab()[i][j].getFlag() == Object::BLACK_EP) {
+					board->getTab()[i][j].setFlag(i, j, Object::NO_FLAG);
+					//break;
 				}
 
 			}
+
 		}
 	}
-	//if (checkmate)cout << "\n checkmate";
+
+
+//funcion de scan check mejorada implementando bit boards
+//añadir ray
+bool Game::scanChecks(Board* board, Object::color_t color) {
+	board->listPieces();
+	if (!findKing(board, color)) {
+		//cerr << "\nError: Rey no encontrado para color " << color << endl;
+		return true;
+	}
+
+	if (board->ky < 0 || board->ky >= board->getSizeY() ||
+		board->kx < 0 || board->kx >= board->getSizeX()) {
+		//cerr << "\nPosición inválida del rey: " << board->ky << "," << board->kx << endl;
+		return true;
+	}
+
+	updateAttackTables();
+	const auto & attackTable = (color == WHITE) ? blackAttackTable : whiteAttackTable;
+
+	if (attackTable[board->ky][board->kx]) {
+		//cout << "\nRey en " << board->ky << "," << board->kx<< " - En jaque: " <<color<< endl;
+		return true;
+	}
+
+	//ray attacks
+
+	return false;
+}
+void Game::updateAttackTables(){
+
+	whiteAttackTable.assign(N, vector<bool>(N, false));
+	blackAttackTable.assign(N, vector<bool>(N, false));
+
+	for (int y = 0; y < N; y++) {
+		for (int x = 0; x < N; x++) {
+			if (board->getTab()[y][x].getColor() != NONE) {
+				calculatePieceAttacks(y, x);
+			}
+		}
+	}
+}
+void Game::calculatePieceAttacks(int y, int x) {
+	Object::color_t color = board->getTab()[y][x].getColor();
+	Object::type_t type = board->getTab()[y][x].getType();
+	vector<vector<bool>>& attackTable = (color == WHITE) ? whiteAttackTable : blackAttackTable;
+	bool Kramnik = board->isKramnik();
+
+	switch (type) {
+
+	case PAWN:
+
+		if (color == WHITE) {
+			if (y > 0) {
+				if (x > 0) attackTable[y - 1][x - 1] = true;
+				if (x < N - 1) attackTable[y - 1][x + 1] = true;
+			}
+		}
+		if (color == BLACK) {
+			if (y < N - 1) {
+				if (x > 0) attackTable[y + 1][x - 1] = true;
+				if (x < N - 1) attackTable[y + 1][x + 1] = true;
+			}
+		}
+		break;
+
+	case ROOK:
+		// Horizontal izquierda
+		for (int i = x - 1; i >= 0; --i) {
+			attackTable[y][i] = true;
+			if (board->getTab()[y][i].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[y][i].getColor() == color) break;
+				else break;
+			}
+		}
+		// Horizontal derecha
+		for (int i = x + 1; i < N; ++i) {
+			attackTable[y][i] = true;
+			if (board->getTab()[y][i].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[y][i].getColor() == color) break;
+				else break;
+			}
+		}
+		// Vertical arriba
+		for (int i = y - 1; i >= 0; --i) {
+			attackTable[i][x] = true;
+			if (board->getTab()[i][x].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[i][x].getColor() == color) break;
+				else break;
+			}
+		}
+		// Vertical abajo
+		for (int i = y + 1; i < N; ++i) {
+			attackTable[i][x] = true;
+			if (board->getTab()[i][x].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[i][x].getColor() == color) break;
+				else break;
+			}
+		}
+		break;
+
+	case BISHOP:
+		// Diagonal superior izquierda
+		for (int i = 1; y - i >= 0 && x - i >= 0; ++i) {
+			attackTable[y - i][x - i] = true;
+			if (board->getTab()[y - i][x - i].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[y - i][x - i].getColor() == color) break;
+				else break;
+			}
+		}
+		// Diagonal superior derecha
+		for (int i = 1; y - i >= 0 && x + i < N; ++i) {
+			attackTable[y - i][x + i] = true;
+			if (board->getTab()[y - i][x + i].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[y - i][x + i].getColor() == color) break;
+				else break;
+			}
+		}
+		// Diagonal inferior izquierda
+		for (int i = 1; y + i < N && x - i >= 0; ++i) {
+			attackTable[y + i][x - i] = true;
+			if (board->getTab()[y + i][x - i].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[y + i][x - i].getColor() == color) break;
+				else break;
+			}
+		}
+		// Diagonal inferior derecha
+		for (int i = 1; y + i < N && x + i < N; ++i) {
+			attackTable[y + i][x + i] = true;
+			if (board->getTab()[y + i][x + i].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[y + i][x + i].getColor() == color) break;
+				else break;
+			}
+		}
+		break;
+
+	case KNIGHT:
+
+		if (x + 1 < N && y + 2 < N) attackTable[y + 2][x + 1] = true;
+		if (x - 1 >= 0 && y + 2 < N) attackTable[y + 2][x - 1] = true;
+		if (x + 1 < N && y - 2 >= 0) attackTable[y - 2][x + 1] = true;
+		if (x - 1 >= 0 && y - 2 >= 0) attackTable[y - 2][x - 1] = true;
+
+		if (y + 1 < N && x + 2 < N) attackTable[y + 1][x + 2] = true;
+		if (y - 1 >= 0 && x + 2 < N) attackTable[y - 1][x + 2] = true;
+		if (y + 1 < N && x - 2 >= 0) attackTable[y + 1][x - 2] = true;
+		if (y - 1 >= 0 && x - 2 >= 0) attackTable[y - 1][x - 2] = true;
+		break;
+
+	case QUEEN:
+
+		// Horizontal izquierda
+		for (int i = x - 1; i >= 0; --i) {
+			attackTable[y][i] = true;
+			if (board->getTab()[y][i].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[y][i].getColor() == color) break;
+				else break;
+			}
+		}
+		// Horizontal derecha
+		for (int i = x + 1; i < N; ++i) {
+			attackTable[y][i] = true;
+			if (board->getTab()[y][i].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[y][i].getColor() == color) break;
+				else break;
+			}
+		}
+		// Vertical arriba
+		for (int i = y - 1; i >= 0; --i) {
+			attackTable[i][x] = true;
+			if (board->getTab()[i][x].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[i][x].getColor() == color) break;
+				else break;
+			}
+		}
+		// Vertical abajo
+		for (int i = y + 1; i < N; ++i) {
+			attackTable[i][x] = true;
+			if (board->getTab()[i][x].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[i][x].getColor() == color) break;
+				else break;
+			}
+		}
+		// Diagonal superior izquierda
+		for (int i = 1; y - i >= 0 && x - i >= 0; ++i) {
+			attackTable[y - i][x - i] = true;
+			if (board->getTab()[y - i][x - i].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[y - i][x - i].getColor() == color) break;
+				else break;
+			}
+		}
+		// Diagonal superior derecha
+		for (int i = 1; y - i >= 0 && x + i < N; ++i) {
+			attackTable[y - i][x + i] = true;
+			if (board->getTab()[y - i][x + i].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[y - i][x + i].getColor() == color) break;
+				else break;
+			}
+		}
+		// Diagonal inferior izquierda
+		for (int i = 1; y + i < N && x - i >= 0; ++i) {
+			attackTable[y + i][x - i] = true;
+			if (board->getTab()[y + i][x - i].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[y + i][x - i].getColor() == color) break;
+				else break;
+			}
+		}
+		// Diagonal inferior derecha
+		for (int i = 1; y + i < N && x + i < N; ++i) {
+			attackTable[y + i][x + i] = true;
+			if (board->getTab()[y + i][x + i].getColor() != NONE) {
+				if (!Kramnik && board->getTab()[y + i][x + i].getColor() == color) break;
+				else break;
+			}
+		}
+		break;
+
+	case KING:
+
+		if (x + 1 < N && y + 1 < N) attackTable[y + 1][x + 1] = true;
+		if (x + 1 < N && y - 1 >= 0) attackTable[y - 1][x + 1] = true;
+		if (y + 1 < N && x - 1 >= 0) attackTable[y + 1][x - 1] = true;
+		if (y - 1 >= 0 && x - 1 >= 0) attackTable[y - 1][x - 1] = true;
+
+		if (y + 1 < N) attackTable[y + 1][x] = true;
+		if (y - 1 >= 0) attackTable[y - 1][x] = true;
+		if ( x + 1 < N) attackTable[y][x + 1] = true;
+		if (x - 1 >= 0) attackTable[y][x -1] = true;
+		break;
+
+	case EMPTY_CELL:
+		break;
+
+	default:
+		break;
+	}
+}
+
+bool Game::findKing(Board* board, Object::color_t c) {
+	for (const auto& p : board->board_pieces) {
+		if (p.type == KING && p.color == c) {
+			board->kx = p.x; board->ky = p.y;
+			return true;
+		}
+	}
+	return false;
+}
+bool Game::scanCheckMate(Object::color_t turn) {
+	bool checkmate = true;
+	//lista todos los movimientos validos para esa pieza
+
+	for (const auto& move : generateAllMoves(*board ,turn)) {
+		board_piece ep = enPassant(board, move);
+		//copia el tablero y hace el movimiento
+		board->getTab()[move.destination.y][move.destination.x].setCell(move.destination.y, move.destination.x, move.source.type, move.source.color);
+		board->getTab()[move.source.y][move.source.x].setCell(move.source.y, move.source.x, EMPTY_CELL, NONE);
+		
+
+		if (!scanChecks(board, turn)) {
+			checkmate = false;
+		}
+		//undo
+		unPassant(board, move, ep);
+		board->getTab()[move.destination.y][move.destination.x].setCell(move.destination.y, move.destination.x, move.destination.type, move.destination.color);
+		board->getTab()[move.source.y][move.source.x].setCell(move.source.y, move.source.x, move.source.type, move.source.color);
+		board->listPieces();
+		if (!checkmate)	break;
+	}
 	return checkmate;
 }
+vector<movement> Game::generateAllMoves(Board& board, Object::color_t color) {
+	board.listPieces();
+	vector<movement> legalmoves;
+	legalmoves.clear();
+	for (const auto& p : board.board_pieces) {
+		if (p.color != color) continue;
 
-void Board::enPassant(int dy, int dx) {
-	if ( getTab()[dy][dx].getFlag() == Object::WHITE_EP) getTab()[dy - 1][dx].setCell(dy - 1, dx,  EMPTY_CELL,  NONE);
-	if ( getTab()[dy][dx].getFlag() == Object::BLACK_EP) getTab()[dy + 1][dx].setCell(dy + 1, dx,  EMPTY_CELL,  NONE);
-	
-}
-
-void Board::cleanEnpassant(Object::color_t c) {
-	for (int i = 0; i < N; i++) {
-		for (int j = 0; j < N; j++) {
-			if(c== WHITE)
-			if ( getTab()[i][j].getFlag() == Object::WHITE_EP) {
-				 getTab()[i][j].setFlag(i, j, Object::NO_FLAG);
-				break;
-			}
-			if (c ==  BLACK)
-				if ( getTab()[i][j].getFlag() == Object::BLACK_EP) {
-					 getTab()[i][j].setFlag(i, j, Object::NO_FLAG);
-					break;
+		for (int i = 0; i < N; i++) {
+			for (int j = 0; j < M; j++) {
+				movement m{ p,{i,j,board.getTab()[i][j].getColor(),board.getTab()[i][j].getType()} };
+				if (board.isLegalmove(m)) {
+					legalmoves.push_back(m);
+					//cout <<"\n"<<p.y<<p.x << i << j;
 				}
+			}
 		}
-	}
+	}return legalmoves;
 }
-
-void Board::setBoard() {
-	//set initial position
-	/*for (int j = 0; j < N; j++) {
-		tab[1][j].setCell(1, j, Piece::PAWN, Piece::BLACK);
-	}
-	for (int j = 0; j < N; j++) {
-		tab[N - 2][j].setCell(N - 2, j, Piece::PAWN, Piece::WHITE);
-	}*/
-	tab[0][0].setCell(0, 0, Piece::ROOK, Piece::BLACK);
-	tab[0][7].setCell(0, 7, Piece::ROOK, Piece::BLACK);
-	tab[7][0].setCell(7, 0, Piece::ROOK, Piece::WHITE);
-	tab[7][7].setCell(7, 7, Piece::ROOK, Piece::WHITE);
-
-	tab[0][2].setCell(0, 2, Piece::BISHOP, Piece::BLACK);
-	tab[0][5].setCell(0, 5, Piece::BISHOP, Piece::BLACK);
-	tab[7][2].setCell(7, 2, Piece::BISHOP, Piece::WHITE);
-	tab[7][5].setCell(7, 5, Piece::BISHOP, Piece::WHITE);
-
-	tab[0][1].setCell(0, 1, Piece::KNIGHT, Piece::BLACK);
-	tab[0][6].setCell(0, 6, Piece::KNIGHT, Piece::BLACK);
-	tab[7][1].setCell(7, 1, Piece::KNIGHT, Piece::WHITE);
-	tab[7][6].setCell(7, 6, Piece::KNIGHT, Piece::WHITE);
-
-	tab[7][3].setCell(7, 3, Piece::QUEEN, Piece::WHITE);
-	tab[0][3].setCell(0, 3, Piece::QUEEN, Piece::BLACK);
-
-	tab[7][4].setCell(7, 4, Piece::KING, Piece::WHITE);
-	tab[0][4].setCell(0, 4, Piece::KING, Piece::BLACK);
-}
-
