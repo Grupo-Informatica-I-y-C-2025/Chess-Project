@@ -1,86 +1,97 @@
 #ifndef __BOARD_H__
 #define __BOARD_H__
 
-#include <iostream>		//incluir librerias
+#pragma once
+#include <iostream>
 #include "piece.h"
+#include <vector>
+
 
 using namespace std;
-//creación de la clase tablero(board)
+
+//clase trivial board_piece para simplificar el codigo
+struct board_piece {
+	int y;
+	int x;
+	Object::color_t color;
+	Object::type_t type;
+};
+struct movement {
+	board_piece source;
+	board_piece destination;
+	int score;
+};
 class Board {
 
+
+	int N;	int M;	//tablero NxN
+	
+	const bool Kramnik;
 protected:
 	
-	const int N;		//tablero NxN
 	Piece** tab;
 
-//acceso público
 public:
-	Board(int n, bool i) :N(n), Kramnik(i) {
 
-		tab = new Piece * [N];
-		for (int i = 0; i < N; i++) {
-			tab[i] = new Piece[N];		//inicialmente vacío
-		}
-	
-	}
+	//creación de la clase tablero(board)
+    Board(int n,int m, bool i) : N(n),M(m), Kramnik(i) {
+        tab = new Piece * [N];
+        for (int i = 0; i < N; i++) {
+            tab[i] = new Piece[N];  //inicialmente vacío
+        }
+    }
 
-	~Board() {
-		for (int i = 0; i < N; i++)
-			delete[] tab[i];
-		delete[] tab;
-	}
+    // Constructor de copia (para clonar un Board)
+    Board(const Board& other) : N(other.N), M(other.M), Kramnik(other.Kramnik), board_pieces(other.board_pieces) {
+        tab = new Piece * [N];
+        for (int i = 0; i < N; i++) {
+            tab[i] = new Piece[M];
+            for (int j = 0; j < M; j++) {
+                tab[i][j] = other.tab[i][j];  // Copiar cada pieza
+            }
+        }
+    }
 
-	int getSize() { return N; }
+    // Destructor para liberar memoria correctamente
+    ~Board() {
+        for (int i = 0; i < N; i++) {
+            delete[] tab[i];
+        }
+        delete[] tab;
+    }
+
+
+
+	bool isKramnik() const { return Kramnik; }
+
+	vector<board_piece> board_pieces;
+	void listPieces();
+
+
+	//funciones de validez de los movimientos
+	bool validateRayMove(movement, bool);
+	bool pawnMove(movement &);
+	bool rookMove(movement &);
+	bool bishopMove( movement &);
+	bool knigthMove(movement &);
+	bool queenMove(movement &);
+	bool kingMove(movement &);
+	bool isLegalmove( movement &);
+
+
+
+
+
+
+
+
+	int getSizeY() { return N; }
+	int getSizeX() { return M; }
 	Piece** getTab() { return tab; }
-	Object::color_t getTurn() { return turn; }
-
-	//reglas de movimiento
-	void activate(int xcell_sel, int ycell_sel);
-	void registerCall(int xcell_sel, int ycell_sel);
-	bool makeMove();
-	bool scanCheckMate(Object::color_t turn);
-	void setBoard(/*game_type*/);
-
-
-	//funciones para implementación del bot
-	//en caso de ser la partida con bot
-
-	Object::color_t player = Object::WHITE;
-	Object::color_t bot = Object::BLACK;
-
-	int piecePunctuation(Object::type_t);
-	int EvaluateGame();
-	int minimax(int depth,int*,int*, bool maximizingPlayer);
-
-
-
-	private:
-	const bool Kramnik;
-	bool action;
-	int src[2] = { -1,-1 }, dest[2] = { -1,-1 };
 	int ky, kx;
-	Object::color_t turn = Object::WHITE;//turno inicial
 
-	bool isKramnik() { return Kramnik; }
-	void doMove();
-	void unselectAll();
-	void changeTurn();
-	bool findKing(Object::color_t c);
+	void setBoard();
 
-	bool scanChecks(Object::color_t c);
-
-	void enPassant(int dy, int dx);
-	void cleanEnpassant(Object::color_t c);
-
-
-
-	//describimos los movimientos permitidos
-	bool pawnMove(int sy, int sx, int dy, int dx);
-	bool rookMove(int sy, int sx, int dy, int dx);
-	bool bishopMove(int sy, int sx, int dy, int dx);
-	bool knigthMove(int sy, int sx, int dy, int dx);
-	bool queenMove(int sy, int sx, int dy, int dx);
-	bool kingMove(int sy, int sx, int dy, int dx);
 };
 
 
