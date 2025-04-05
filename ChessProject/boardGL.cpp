@@ -23,20 +23,30 @@ void BoardGL::DrawGrid() {
 	// Draws NxN grid of size width with the upper left hand corner
 	// at (0,0)
 
-	
+
 
 	GLTools::Color(gltools::BLACK);
-	float dist = N * width;
+	float dist1 = M * width;
 	for (int i = 0; i <= N; i++) {
 		if (i % N == 0) glLineWidth(4);
 		else glLineWidth(1);
 		glBegin(GL_LINES);
-		glVertex3f(i * width, 0, 0);
-		glVertex3f(i * width, -dist, 0);
+
 		glVertex3f(0, -i * width, 0);
-		glVertex3f(dist, -i * width, 0);
+		glVertex3f(dist1, -i * width, 0);
 		glEnd();
 	}
+	float dist2 = N * width;
+	for (int i = 0; i <= M; i++) {
+		if (i % M == 0) glLineWidth(4);
+		else glLineWidth(1);
+		glBegin(GL_LINES);
+
+		glVertex3f(i * width, 0, 0);
+		glVertex3f(i * width, -dist2, 0);
+		glEnd();
+	}
+	
 }
 
 void BoardGL::DrawCell(int i, int j) {
@@ -65,7 +75,7 @@ void BoardGL::DrawCell(int i, int j) {
 
 	case Object::PAWN:
 		glDisable(GL_LIGHTING);
-		
+
 		//Dibuja el peón
 
 		glTranslatef(glx, gly, 0);
@@ -144,7 +154,7 @@ void BoardGL::DrawCell(int i, int j) {
 
 void BoardGL::Draw() {
 
-	center_x = N * width / 2;
+	center_x = M * width / 2;
 	center_y = -N * width / 2;
 	center_z = 0;
 
@@ -159,15 +169,10 @@ void BoardGL::Draw() {
 	glEnable(GL_LIGHTING);
 
 
-	
-	////Activa movimiento
-	m_board->makeMove();
-
 	//Draws board and grid
-
 	DrawGrid();
 	for (int i = 0; i < N; i++) {
-		for (int j = 0; j < N; j++) {
+		for (int j = 0; j < M; j++) {
 			DrawCell(i, j);
 		}
 	}
@@ -179,7 +184,7 @@ void BoardGL::Draw() {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GLTools::Color(gltools::RED, 1.0f);
 	glTranslatef(center_x, center_y, center_z);
-	glRectf(N * width / 2.0f, N * width / 2.0f, -N * width / 2.0f, -N * width / 2.0f);
+	glRectf(M * width / 2.0f, N * width / 2.0f, -M * width / 2.0f, -N * width / 2.0f);
 	glTranslatef(-center_x, -center_y, -center_z);
 	glEnable(GL_LIGHTING);
 
@@ -230,17 +235,15 @@ void BoardGL::MouseButton(int x, int y, int button, bool down, bool sKey, bool c
 		midButton = down;
 	///////////////////////////
 
-	
+
 	if (down) {
 
-		if (!m_board->scanCheckMate()) {
-			////Regsitrar psoicion previa y final -- parte propia
-			m_board->registerCall( xcell_sel,  ycell_sel);
+		////Regsitrar psoicion previa y final -- parte propia
+		game.registerCall(xcell_sel, ycell_sel);
 
-			////Iniciar movimiento
-			m_board->activate(xcell_sel, ycell_sel);
+		////Iniciar movimiento
+		game.activate(xcell_sel, ycell_sel);
 
-		}
 	}
 }
 
@@ -260,4 +263,7 @@ void BoardGL::KeyDown(unsigned char key) {
 	}
 }
 
+void BoardGL::OnTimer(int value) {
+	game.makeMove();
+}
 
