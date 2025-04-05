@@ -4,7 +4,7 @@
 
 #include <string>
 #include <vector>
-#include "board.h"
+#include "Game.h"
 
 
 //enums to eliminate dependency of glut
@@ -14,11 +14,8 @@ enum { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT };
 using namespace std;
 
 class BoardGL {
-
-public:
-	
-
 	//Renders
+	void drawCircle(float cx, float cy, float r, int num_segments);
 	void drawPawn(Object::color_t c);
 	void drawRook(Object::color_t c);
 	void drawBishop(Object::color_t c);
@@ -26,10 +23,12 @@ public:
 	void drawQueen(Object::color_t c);
 	void drawKing(Object::color_t c);
 
+public:
 	//define board 
-	BoardGL(Board* pb) :m_board(pb) {
+	BoardGL(Board* pb, Game g) :m_board(pb), game(g) {
 		width = 0.15;				//width of each cell in the grid
-		N = pb->getSize();		//Grid NxN
+		N = pb->getSizeY();
+		M = pb->getSizeX();		//Grid NxN
 		dist = 2;					//distance of viewpoint from center of the board
 		center_z = 0;
 	}
@@ -45,6 +44,8 @@ public:
 	void KeyDown(unsigned char key);
 	void SpecialKeyDown(unsigned char key);
 	void MouseButton(int x, int y, int button, bool down, bool shiftKey, bool ctrlKey);
+	void OnTimer(int value);
+
 
 
 	//info
@@ -67,8 +68,10 @@ public:
 
 protected:
 	float width;
-	int N;								 //size 
+	int N;
+	int M;//size 
 	Board* m_board;
+	Game game;
 
 	//visualization	
 	double center_x, center_y, center_z;
