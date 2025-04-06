@@ -57,7 +57,6 @@ void Game::registerCall(int xcell_sel, int ycell_sel) {
 
 //reorganizar las funciones de juego, limpiar
 board_piece Game::findPiece(int x, int y) {
-	board->listPieces();
 	for (const auto& p : board->board_pieces) {
 		if (x == p.x && y == p.y) {
 			return p;
@@ -66,57 +65,55 @@ board_piece Game::findPiece(int x, int y) {
 	board_piece null{ -1,-1 };
 	return null;
 }
-
 void Game::makeMove() {
 		
 	if (!scanCheckMate(turn) && turn == bot) {
 		auto botmove = botMove(turn);
 		src[0] = botmove.source.y ; src[1] = botmove.source.x ; dest[0]= botmove.destination.y ; dest[1] = botmove.destination.x ;
-		cout << "\n move:" << src[0] << src[1] << dest[0] << dest[1];
+		//cout << "\n move:" << src[0] << src[1] << dest[0] << dest[1];
 	}
 
 	 board_piece piece = findPiece( src[1], src[0]);
 	if (piece.x != -1 && piece.y != -1 && dest[0] != -1 && dest[1] != -1) {
 		movement move = { piece,{dest[0],dest[1],board->getTab()[dest[0]][dest[1]].getColor(),board->getTab()[dest[0]][dest[1]].getType() } };
 		//cout << "\n move:" << piece.y << piece.x << dest[0] << dest[1];
-		if (piece.color == turn && board->isLegalmove(move) && doMove(board, move))changeTurn();
+		if (piece.color == turn && board->isLegalmove(move) && doMove( move))changeTurn();
 		else { src[0] = dest[0]; src[1] = dest[1]; }
 		
 		dest[0] = -1, dest[1] = -1;
-		//cout << "\n coords:" << src[0] << src[1] << dest[0] << dest[1];
 	}
 	
 }
-bool Game::doMove(Board* board,movement& move) {//
+bool Game::doMove(movement& move) {//
+	vector<board_piece> null;
 	board_piece ep = enPassant(board, move);
-	board->getTab()[move.destination.y][move.destination.x].setCell(move.destination.y, move.destination.x, move.source.type,move.source.color);
-	board->getTab()[move.source.y][move.source.x].setCell(move.source.y, move.source.x, EMPTY_CELL, NONE);
+	board->updateBoardPiece(move.destination.x, move.destination.y, move.source.type, move.source.color);
+	board->updateBoardPiece(move.source.x , move.source.y, EMPTY_CELL, NONE);
 	
 
-	if (scanChecks(board,move.source.color)) {
+	if (scanChecks(board,move.source.color,null)) {
 		//cout << "\nmove invalid because resulted in check";
 		//redo en passant
-		if(ep.x != -1 && ep.y != -1)board->getTab()[ep.y][ep.x].setCell(ep.y, ep.x, ep.type, ep.color);
+		if (ep.x != -1 && ep.y != -1)board->updateBoardPiece(ep.x, ep.y, ep.type, ep.color);
 
-		board->getTab()[move.destination.y][move.destination.x].setCell(move.destination.y, move.destination.x, move.destination.type, move.destination.color);
-		board->getTab()[move.source.y][move.source.x].setCell(move.source.y, move.source.x, move.source.type, move.source.color);
-		board->listPieces();
+		board->updateBoardPiece(move.destination.x , move.destination.y, move.destination.type, move.destination.color);
+		board->updateBoardPiece(move.source.x,move.source.y, move.source.type, move.source.color);
 		return false;
 	}
 	return true;
 }
 void Game::changeTurn() {//referencia a cambiar de turno o traer turno <aqui
-
+	vector<board_piece> null;
 	if (turn == BLACK)turn = WHITE;
 	else turn = BLACK;
 
 	if (!scanCheckMate(turn)) {
-		if (scanChecks(board, turn)) {
+		if (scanChecks(board, turn,null)) {
 			cout << "\n check!";
 		}
 		if (turn == WHITE)cout << "\nwhites turn score:   "<<EvaluateGame(board);
 		else cout << "\nblacks turn score:   " << EvaluateGame(board);
-	}else{ cout << "\n checkmate"; }
+	}else{ game_over = true; }
 
 	
 
@@ -126,25 +123,26 @@ void Game::changeTurn() {//referencia a cambiar de turno o traer turno <aqui
 	unselectAll();
 }
 
-
+//implementacion de en passant en el juego
 board_piece Game::enPassant(Board* board,const movement& pawn) {//
 	if (board->getTab()[pawn.source.y][pawn.source.x].getType() == PAWN) {
-		if ((pawn.source.y == board->getSizeY() - 2) && (pawn.source.x == pawn.destination.x) && (pawn.destination.y == pawn.source.y - 2) /*&& (pawn.destination.color == NONE)  && board->getTab()[pawn.destination.y + 1][pawn.destination.x].getColor() == NONE*/) {
+		if ((pawn.source.y == board->getSizeY() - 2) && (pawn.source.x == pawn.destination.x) && (pawn.destination.y == pawn.source.y - 2)) {
 			//aquí hay que insertar un flag para el en passant
 			board->getTab()[pawn.destination.y + 1][pawn.destination.x].setFlag(pawn.destination.y + 1, pawn.destination.x, Object::WHITE_EP);
 		}
-		else if ((pawn.source.y == 1) && (pawn.source.x == pawn.destination.x) && (pawn.destination.y == pawn.source.y + 2) /* && (pawn.destination.color == NONE) && (getTab()[pawn.destination.y - 1][pawn.destination.x].getColor() == NONE)*/) {
+		else if ((pawn.source.y == 1) && (pawn.source.x == pawn.destination.x) && (pawn.destination.y == pawn.source.y + 2)) {
 			//aquí hay que insertar un flag para el en passant
 			board->getTab()[pawn.destination.y - 1][pawn.destination.x].setFlag(pawn.destination.y - 1, pawn.destination.x, Object::BLACK_EP);
 		}
+
 		if (board->getTab()[pawn.destination.y][pawn.destination.x].getFlag() == Object::WHITE_EP) {
 			board_piece ep = { pawn.destination.y - 1, pawn.destination.x , board->getTab()[pawn.destination.y-1][pawn.destination.x].getColor(), board->getTab()[pawn.destination.y-1][pawn.destination.x].getType() };
-			board->getTab()[pawn.destination.y - 1][pawn.destination.x].setCell(pawn.destination.y - 1, pawn.destination.x, EMPTY_CELL, NONE);
+			board->updateBoardPiece(pawn.destination.x, pawn.destination.y - 1, EMPTY_CELL, NONE);
 			return  ep ;
 		}
 		if (board->getTab()[pawn.destination.y][pawn.destination.x].getFlag() == Object::BLACK_EP) {
 			board_piece ep = { pawn.destination.y + 1, pawn.destination.x , board->getTab()[pawn.destination.y + 1][pawn.destination.x].getColor(), board->getTab()[pawn.destination.y+1][pawn.destination.x].getType() };
-			board->getTab()[pawn.destination.y + 1][pawn.destination.x].setCell(pawn.destination.y + 1, pawn.destination.x, EMPTY_CELL, NONE);
+			board->updateBoardPiece(pawn.destination.x, pawn.destination.y + 1, EMPTY_CELL, NONE);
 			return ep;
 		}
 		return pawn.source;
@@ -152,9 +150,8 @@ board_piece Game::enPassant(Board* board,const movement& pawn) {//
 	board_piece null{ -1,-1 };
 	return null;
 }
-
 void  Game::unPassant(Board* board, const movement& pawn, const board_piece& ep) {//
-	if (ep.x != -1 && ep.y != -1)board->getTab()[ep.y][ep.x].setCell(ep.y, ep.x, ep.type, ep.color);
+	if (ep.x != -1 && ep.y != -1)board->updateBoardPiece(ep.x, ep.y, ep.type, ep.color);
 	if ((pawn.source.y == board->getSizeY() - 2) && (pawn.source.x == pawn.destination.x) && (pawn.destination.y == pawn.source.y - 2) /*&& (pawn.destination.color == NONE)  && board->getTab()[pawn.destination.y + 1][pawn.destination.x].getColor() == NONE*/) {
 		//aquí hay que insertar un flag para el en passant
 		board->getTab()[pawn.destination.y + 1][pawn.destination.x].setFlag(pawn.destination.y + 1, pawn.destination.x, Object::NO_FLAG);
@@ -164,7 +161,6 @@ void  Game::unPassant(Board* board, const movement& pawn, const board_piece& ep)
 		board->getTab()[pawn.destination.y - 1][pawn.destination.x].setFlag(pawn.destination.y - 1, pawn.destination.x, Object::NO_FLAG);
 	}
 }
-
 void Game::cleanEnpassant(Board* board) {
 	for (int i = 0; i < N; i++) {
 		for (int j = 0; j < M; j++) {
@@ -182,35 +178,8 @@ void Game::cleanEnpassant(Board* board) {
 		}
 	}
 
-
-//funcion de scan check mejorada implementando bit boards
-//añadir ray
-bool Game::scanChecks(Board* board, Object::color_t color) {
-	board->listPieces();
-	if (!findKing(board, color)) {
-		//cerr << "\nError: Rey no encontrado para color " << color << endl;
-		return true;
-	}
-
-	if (board->ky < 0 || board->ky >= board->getSizeY() ||
-		board->kx < 0 || board->kx >= board->getSizeX()) {
-		//cerr << "\nPosición inválida del rey: " << board->ky << "," << board->kx << endl;
-		return true;
-	}
-
-	updateAttackTables();
-	const auto & attackTable = (color == WHITE) ? blackAttackTable : whiteAttackTable;
-
-	if (attackTable[board->ky][board->kx]) {
-		//cout << "\nRey en " << board->ky << "," << board->kx<< " - En jaque: " <<color<< endl;
-		return true;
-	}
-
-	//ray attacks
-
-	return false;
-}
-void Game::updateAttackTables(){
+//seguir optimizando scancheck para guardar los bitboard en caché
+void Game::updateAttackTables() {
 
 	whiteAttackTable.assign(N, vector<bool>(N, false));
 	blackAttackTable.assign(N, vector<bool>(N, false));
@@ -407,8 +376,8 @@ void Game::calculatePieceAttacks(int y, int x) {
 
 		if (y + 1 < N) attackTable[y + 1][x] = true;
 		if (y - 1 >= 0) attackTable[y - 1][x] = true;
-		if ( x + 1 < N) attackTable[y][x + 1] = true;
-		if (x - 1 >= 0) attackTable[y][x -1] = true;
+		if (x + 1 < N) attackTable[y][x + 1] = true;
+		if (x - 1 >= 0) attackTable[y][x - 1] = true;
 		break;
 
 	case EMPTY_CELL:
@@ -418,7 +387,6 @@ void Game::calculatePieceAttacks(int y, int x) {
 		break;
 	}
 }
-
 bool Game::findKing(Board* board, Object::color_t c) {
 	for (const auto& p : board->board_pieces) {
 		if (p.type == KING && p.color == c) {
@@ -428,44 +396,135 @@ bool Game::findKing(Board* board, Object::color_t c) {
 	}
 	return false;
 }
-bool Game::scanCheckMate(Object::color_t turn) {
-	bool checkmate = true;
-	//lista todos los movimientos validos para esa pieza
+bool Game::scanChecks(Board* board, Object::color_t color,vector<board_piece>& attackers) {
+	attackers.clear();
+	board->listPieces();
+	if (!findKing(board, color)) return true;
 
-	for (const auto& move : generateAllMoves(*board ,turn)) {
-		board_piece ep = enPassant(board, move);
-		//copia el tablero y hace el movimiento
-		board->getTab()[move.destination.y][move.destination.x].setCell(move.destination.y, move.destination.x, move.source.type, move.source.color);
-		board->getTab()[move.source.y][move.source.x].setCell(move.source.y, move.source.x, EMPTY_CELL, NONE);
-		
+	updateAttackTables();
+	const auto& attackTable = (color == WHITE) ? blackAttackTable : whiteAttackTable;
 
-		if (!scanChecks(board, turn)) {
-			checkmate = false;
-		}
-		//undo
-		unPassant(board, move, ep);
-		board->getTab()[move.destination.y][move.destination.x].setCell(move.destination.y, move.destination.x, move.destination.type, move.destination.color);
-		board->getTab()[move.source.y][move.source.x].setCell(move.source.y, move.source.x, move.source.type, move.source.color);
-		board->listPieces();
-		if (!checkmate)	break;
-	}
-	return checkmate;
-}
-vector<movement> Game::generateAllMoves(Board& board, Object::color_t color) {
-	board.listPieces();
-	vector<movement> legalmoves;
-	legalmoves.clear();
-	for (const auto& p : board.board_pieces) {
-		if (p.color != color) continue;
-
-		for (int i = 0; i < N; i++) {
-			for (int j = 0; j < M; j++) {
-				movement m{ p,{i,j,board.getTab()[i][j].getColor(),board.getTab()[i][j].getType()} };
-				if (board.isLegalmove(m)) {
-					legalmoves.push_back(m);
-					//cout <<"\n"<<p.y<<p.x << i << j;
-				}
+	if (attackTable[board->ky][board->kx]) {
+		for (const auto& p : board->board_pieces) {
+			if (p.color != color) {
+				movement move = { p,{board->ky,board->kx,color,KING} };
+				if (board->isLegalmove(move))attackers.push_back(p);
 			}
 		}
-	}return legalmoves;
+		return true;
+	}
+
+	//ray attacks
+
+	return false;
+}
+
+//funciones que optimizan la detccion de jaque mate
+bool Game::canKingMove(Board *board,Object::color_t color) {
+	//8 posibles direcciones de movimiento
+	//board->listPieces();
+	findKing(board, color);
+	static const int dirs[8][2] = { {-1,-1}, {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,-1}, {1,0}, {1,1} };
+	vector<board_piece> null;
+	int original_ky = board->ky;
+	int original_kx = board->kx;
+	for (auto& d : dirs) {
+		int ny = board->ky + d[0];
+		int nx = board->kx + d[1];
+		if (ny < 0 || ny >= N || nx < 0 || nx >= M) continue;
+		
+		movement move{ {original_ky, original_kx, color, KING}, {ny, nx, board->getTab()[ny][nx].getColor(), board->getTab()[ny][nx].getType()} };
+		if (board->isLegalmove(move)) {
+			//hace movimiento
+			board->updateBoardPiece(move.destination.x, move.destination.y, move.source.type, move.source.color);
+			board->updateBoardPiece(move.source.x, move.source.y, EMPTY_CELL, NONE);
+
+			bool check = scanChecks(board,color, null);
+
+			board->updateBoardPiece(move.destination.x, move.destination.y, move.destination.type, move.destination.color);
+			board->updateBoardPiece(move.source.x, move.source.y, move.source.type, move.source.color);
+			board->ky = original_ky;
+			board->kx = original_kx;
+			//board->listPieces();
+			if (!check)return true;
+
+		}
+	}
+	return false;
+}
+bool Game::canCaptureAttacker(Board* board, Object::color_t color, const board_piece& attacker) {
+	//board->listPieces();
+	vector<board_piece> null;
+	for (const auto& p : board->board_pieces) {
+		if (p.color == color && p.type!=KING ) {
+
+			movement move = { p,{attacker.y,attacker.x,attacker.color,attacker.type} };
+			if (board->isLegalmove(move)) {
+				board_piece ep = enPassant(board, move);
+				board->updateBoardPiece(move.destination.x, move.destination.y, move.source.type, move.source.color);
+				board->updateBoardPiece(move.source.x, move.source.y, EMPTY_CELL, NONE);
+
+				bool check = scanChecks(board, color, null);
+
+				unPassant(board, move, ep);
+				board->updateBoardPiece(move.destination.x, move.destination.y, move.destination.type, move.destination.color);
+				board->updateBoardPiece(move.source.x, move.source.y, move.source.type, move.source.color);
+				//board->listPieces();
+				if (!check)return true;
+			}
+		}
+	}
+	return false;
+}
+bool Game::canBlockAttacker(Board* board, Object::color_t color, const board_piece& attacker) {
+	//board->listPieces();
+	vector<board_piece> null;
+	int dy = (attacker.y - board->ky) ? (attacker.y - board->ky) / abs(attacker.y - board->ky) : 0;
+	int dx = (attacker.x - board->kx) ? (attacker.x - board->kx) / abs(attacker.x - board->kx) : 0;
+
+	vector<pair<int,int>> path;
+	int y = board->ky + dy;
+	int x = board->kx + dx;
+
+	while (y != attacker.y || x != attacker.x) {
+		path.emplace_back( y, x );
+		y += dy;
+		x += dx;
+	}
+	for (auto& pos : path) {
+		for (const auto& p : board->board_pieces) {
+			movement move = { p,{pos.first,pos.second,board->getTab()[pos.first][pos.second].getColor() ,board->getTab()[pos.first][pos.second].getType()} };
+			if (board->isLegalmove(move)) {
+				board_piece ep = enPassant(board, move);
+				board->updateBoardPiece(move.destination.x, move.destination.y, move.source.type, move.source.color);
+				board->updateBoardPiece(move.source.x, move.source.y, EMPTY_CELL, NONE);
+
+				bool check = scanChecks(board, color, null);
+
+				unPassant(board, move, ep);
+				board->updateBoardPiece(move.destination.x, move.destination.y, move.destination.type, move.destination.color);
+				board->updateBoardPiece(move.source.x, move.source.y, move.source.type, move.source.color);
+				//board->listPieces();
+				if (!check)return true;
+			}
+		}
+	}
+	return false;
+}
+bool Game::scanCheckMate(Object::color_t turn) {
+	vector<board_piece> attackers;
+	bool check = scanChecks(board, turn, attackers);
+	if (!check)return false;//si no hay jaque
+	if (attackers.size() > 1) return !canKingMove(board, turn);//si es doble jaque
+
+	if (canKingMove(board, turn))return false;//si puede moverse el rey
+
+	if (canCaptureAttacker(board, turn, attackers[0]))return false;//si se puede comer al atacante
+
+	if (attackers[0].type == QUEEN || attackers[0].type == ROOK || attackers[0].type == BISHOP) {//si se puede bloquear el atacante
+		if (canBlockAttacker(board, turn, attackers[0]))return false;
+	}
+
+
+	return true;
 }
