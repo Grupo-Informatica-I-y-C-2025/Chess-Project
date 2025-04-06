@@ -74,13 +74,12 @@ bool Board::validateRayMove(movement move, bool checkDiagonals) {
 	}
 	return true;
 }
-
 bool Board::pawnMove(movement&pawn) {
 	if (pawn.source.color == WHITE)
 	{
 		if ((pawn.source.y == getSizeY() - 2) && (pawn.source.x == pawn.destination.x) && (pawn.destination.y == pawn.source.y - 2) && (pawn.destination.color == NONE) && getTab()[pawn.destination.y + 1][pawn.destination.x].getColor() == NONE) {
 
-			//aqu� hay que insertar un flag para el en passant
+			//aquí hay que insertar un flag para el en passant
 			return true;
 		}
 		else if ((pawn.source.x == pawn.destination.x) && (pawn.destination.y == pawn.source.y - 1) && (pawn.destination.color == NONE))
@@ -99,7 +98,7 @@ bool Board::pawnMove(movement&pawn) {
 	{
 		if ((pawn.source.y == 1) && (pawn.source.x == pawn.destination.x) && (pawn.destination.y == pawn.source.y + 2) && (pawn.destination.color == NONE) && (getTab()[pawn.destination.y - 1][pawn.destination.x].getColor() == NONE)) {
 
-			//aqu� hay que insertar un flag para el en passant
+			//aquí hay que insertar un flag para el en passant
 			return true;
 		}
 		else if (pawn.source.x == pawn.destination.x && pawn.destination.y == pawn.source.y + 1 && pawn.destination.color == NONE)
@@ -173,3 +172,18 @@ void Board::listPieces() {
 	}
 }
 
+//funcion interfaz para modificar las celdas y actualizar la lista de piezas
+void Board::updateBoardPiece(int x, int y, Object::type_t type, Object::color_t color) {
+	// Eliminar la pieza anterior si existe
+	auto it = remove_if(board_pieces.begin(), board_pieces.end(),
+		[x, y](const board_piece& p) { return p.x == x && p.y == y; });
+	board_pieces.erase(it, board_pieces.end());
+
+	// Añadir nueva pieza si no es vacía
+	if (type != Object::EMPTY_CELL || color != Object::NONE) {
+		board_pieces.push_back({ y, x, color, type });
+	}
+
+	// Actualizar la celda en el tablero
+	tab[y][x].setCell(x, y, type, color);
+}
