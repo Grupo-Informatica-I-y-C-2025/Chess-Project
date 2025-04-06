@@ -9,8 +9,8 @@
 
 using namespace std;
 
-//clase trivial board_piece para simplificar el codigo
 struct board_piece {
+	//clase trivial board_piece para simplificar el codigo
 	int y;
 	int x;
 	Object::color_t color;
@@ -64,8 +64,7 @@ public:
 
 	bool isKramnik() const { return Kramnik; }
 
-	vector<board_piece> board_pieces;
-	void listPieces();
+	
 
 
 	//funciones de validez de los movimientos
@@ -89,9 +88,10 @@ public:
 	int getSizeX() { return M; }
 	Piece** getTab() { return tab; }
 	int ky, kx;
-
 	void setBoard();
-
+    void updateBoardPiece(int x, int y, Object::type_t type, Object::color_t color);
+	vector<board_piece> board_pieces;
+	void listPieces();
 };
 
 
