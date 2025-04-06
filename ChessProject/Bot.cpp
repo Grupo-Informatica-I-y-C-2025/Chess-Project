@@ -14,8 +14,6 @@
 #define BLACK Object::BLACK
 #define NONE Object::NONE
 
-
-
 int Game::piecePunctuation(Object::type_t type) {
 	switch (type)
 	{
@@ -61,7 +59,6 @@ int Game::piecePunctuation(Object::type_t type) {
 		break;
 	}
 }
-
 int Game::EvaluateGame(Board* board) {
 	int score = 0;
 
@@ -75,6 +72,24 @@ int Game::EvaluateGame(Board* board) {
 
 //añadida escalera de punteros para la correcta implementación del algoritmo alpha beta prunning
 //minmax alpha beta prunning da resultados consistentes 
+vector<movement> Game::generateAllMoves(Board& board, Object::color_t color) {
+	board.listPieces();
+	vector<movement> legalmoves;
+	legalmoves.clear();
+	for (const auto& p : board.board_pieces) {
+		if (p.color != color) continue;
+
+		for (int i = 0; i < N; i++) {
+			for (int j = 0; j < M; j++) {
+				movement m{ p,{i,j,board.getTab()[i][j].getColor(),board.getTab()[i][j].getType()} };
+				if (board.isLegalmove(m)) {
+					legalmoves.push_back(m);
+					//cout <<"\n"<<p.y<<p.x << i << j;
+				}
+			}
+		}
+	}return legalmoves;
+}
 int Game::minimax( int depth, int* n, int* alpha, int* beta, bool maximizingPlayer, vector <movement>& moves) {
 
 	Object::color_t color;
@@ -87,16 +102,17 @@ int Game::minimax( int depth, int* n, int* alpha, int* beta, bool maximizingPlay
 	if (depth == 0) return  EvaluateGame(board);
 	else {
 		//cout << "\n" << depth;
-
+		
 		for (const auto& move : generateAllMoves(*board, color)) {
+			if (*alpha >= *beta) break;
 			board_piece ep = enPassant(board, move);
-			board->getTab()[move.destination.y][move.destination.x].setCell(move.destination.y, move.destination.x, move.source.type, move.source.color);
-			board->getTab()[move.source.y][move.source.x].setCell(move.source.y, move.source.x, EMPTY_CELL, NONE);
-			
+			board->updateBoardPiece(move.destination.x, move.destination.y, move.source.type, move.source.color);
+			board->updateBoardPiece(move.source.x, move.source.y, EMPTY_CELL, NONE);
+			vector<board_piece> null;
 
 			//check if result in checkmate
 			//bool inCheck = scanChecks(board, color);
-			if (!scanChecks(board, color)) {
+			if (!scanChecks(board, color, null)) {
 				int eval = minimax( depth - 1, n, &alpha1, &beta1, !maximizingPlayer, moves);
 
 				// [5] Actualizar alpha/beta con logs
@@ -116,9 +132,8 @@ int Game::minimax( int depth, int* n, int* alpha, int* beta, bool maximizingPlay
 			}
 			//undo
 			unPassant(board, move, ep);
-			board->getTab()[move.destination.y][move.destination.x].setCell(move.destination.y, move.destination.x, move.destination.type, move.destination.color);
-			board->getTab()[move.source.y][move.source.x].setCell(move.source.y, move.source.x, move.source.type, move.source.color);
-			board->listPieces();
+			board->updateBoardPiece(move.destination.x, move.destination.y, move.destination.type, move.destination.color);
+			board->updateBoardPiece(move.source.x, move.source.y, move.source.type, move.source.color);
 			if (beta1 <= alpha1)  break;
 
 		}
@@ -127,7 +142,6 @@ int Game::minimax( int depth, int* n, int* alpha, int* beta, bool maximizingPlay
 		if (!maximizingPlayer) { /* if (depth > 1)cout << "\nbot moving depth :" << depth << "    mineval :" << minEval;*/ return minEval; }
 	}
 }
-
 movement Game::botMove(Object::color_t c) {
 	int alpha = -10000, beta = 10000, n = 4; bool a = true;//despues de pruebas, 6 es el limite computable en corto tiempo
 	vector <movement> moves;
