@@ -1,45 +1,47 @@
 #pragma once
-#include "Game.h"
+#include "Bot.h"
 #include <random>
-#include "board.h"
+#include <chrono>
 
-#define PAWN Object::PAWN
-#define ROOK Object::ROOK
-#define BISHOP Object::BISHOP
-#define KNIGHT Object::KNIGHT
-#define QUEEN Object::QUEEN
-#define KING Object::KING
-#define EMPTY_CELL Object::EMPTY_CELL
-#define WHITE Object::WHITE 
-#define BLACK Object::BLACK
-#define NONE Object::NONE
 
-int Game::piecePunctuation(Object::type_t type) {
+#define PAWN 0
+#define KNIGHT 1
+#define BISHOP 2
+#define ROOK 3
+#define QUEEN 4
+#define KING 5
+#define EMPTY_CELL 6
+#define WHITE 0
+#define BLACK 1
+#define NONE 2
+
+
+int Bot::piecePunctuation(int type) {
 	switch (type)
 	{
 	case PAWN:
 
-		return 1;
+		return 100;
 		break;
 
 	case ROOK:
 
-		return 5;
+		return 500;
 		break;
 
 	case BISHOP:
 
-		return 3;
+		return 300;
 		break;
 
 	case KNIGHT:
 
-		return 3;
+		return 300;
 		break;
 
 	case QUEEN:
 
-		return 9;
+		return 900;
 		break;
 
 	case KING:
@@ -59,110 +61,136 @@ int Game::piecePunctuation(Object::type_t type) {
 		break;
 	}
 }
-int Game::EvaluateGame(Board* board) {
-	int score = 0;
 
-	board->listPieces();
-	for (const auto& p : board->board_pieces) {
-		if (p.color == bot ) score += piecePunctuation(p.type);
-		else if(p.color == Player())score -= piecePunctuation(p.type);
+int Bot::EvaluateGame(bool turn) {
+	int score = 0;
+	// Evaluación de material
+	for (int sq = 0; sq < 64; sq++) {
+		if (board->currentState.occupancy & 1ULL << sq) {
+			int type = board->BitboardGetType(sq);
+			int color = board->BitboardGetColor(sq);
+			score += ( color == bot) ? piecePunctuation(type) : -piecePunctuation(type);
+		}
 	}
+
+	// Bonus por jaque al oponente
+	bool inCheck = board->scanChecks(!turn);
+	if (inCheck) score += (turn == bot) ? 5000 : -5000;
+
 	return score;
 }
 
-//añadida escalera de punteros para la correcta implementación del algoritmo alpha beta prunning
-//minmax alpha beta prunning da resultados consistentes 
-vector<movement> Game::generateAllMoves(Board& board, Object::color_t color) {
-	board.listPieces();
-	vector<movement> legalmoves;
-	legalmoves.clear();
-	for (const auto& p : board.board_pieces) {
-		if (p.color != color) continue;
+vector<Move> Bot::generateAllMoves( bool color) {
 
-		for (int i = 0; i < N; i++) {
-			for (int j = 0; j < M; j++) {
-				movement m{ p,{i,j,board.getTab()[i][j].getColor(),board.getTab()[i][j].getType()} };
-				if (board.isLegalmove(m)) {
-					legalmoves.push_back(m);
-					//cout <<"\n"<<p.y<<p.x << i << j;
-				}
-			}
-		}
-	}return legalmoves;
+	vector<Move> legalMoves = board->generateAllMoves(color);
+	orderMoves(legalMoves);
+	return legalMoves;
 }
-int Game::minimax( int depth, int* n, int* alpha, int* beta, bool maximizingPlayer, vector <movement>& moves) {
 
-	Object::color_t color;
-	int maxEval = -10000, minEval = 10000;
-	int alpha1 = *alpha, beta1 = *beta;
+void Bot::orderMoves(vector<Move>& moves) {
+	std::sort(moves.begin(), moves.end(), [this](const Move& a, const Move& b) {
+		/*// Prioridad 1: Movimientos que dan jaque
+		bool aCheck = scanChecksStatic(a);
+		bool bCheck = scanChecksStatic(b);
+		if (aCheck != bCheck) return aCheck > bCheck;*/
 
-	if (maximizingPlayer) color = bot;
-	else color = Player();
-
-	if (depth == 0) return  EvaluateGame(board);
-	else {
-		//cout << "\n" << depth;
 		
-		for (const auto& move : generateAllMoves(*board, color)) {
-			if (*alpha >= *beta) break;
-			board_piece ep = enPassant(board, move);
-			board->updateBoardPiece(move.destination.x, move.destination.y, move.source.type, move.source.color);
-			board->updateBoardPiece(move.source.x, move.source.y, EMPTY_CELL, NONE);
-			vector<board_piece> null;
+		// Prioridad 2: Ganancia de material
+		int aGain = piecePunctuation(board->BitboardGetType(a.targetSquare)) - piecePunctuation(board->BitboardGetType(a.sourceSquare));
+		int bGain = piecePunctuation(board->BitboardGetType(b.targetSquare)) - piecePunctuation(board->BitboardGetType(b.sourceSquare));
+		return aGain > bGain;
+		});
+}
 
-			//check if result in checkmate
-			//bool inCheck = scanChecks(board, color);
-			if (!scanChecks(board, color, null)) {
-				int eval = minimax( depth - 1, n, &alpha1, &beta1, !maximizingPlayer, moves);
+int Bot::minimax( int depth, int* n, int* alpha, int* beta, bool maximizingPlayer, vector <Move>& moves) {
 
-				// [5] Actualizar alpha/beta con logs
-				if (maximizingPlayer) {
-					maxEval = max(maxEval, eval);
-					alpha1 = max(alpha1, eval);
-				}
-				else {
-					minEval = min(minEval, eval);
-					beta1 = min(beta1, eval);
-				}
-				if (*n == depth && eval<10000 && eval > -10000) {
-					auto moveD1 = move;
-					moveD1.score = eval;
-					moves.push_back(moveD1);
+	int bestEval =(maximizingPlayer)? -100000: 100000;
+	int alpha1 = *alpha, beta1 = *beta;
+	bool color = (maximizingPlayer)? bot : player;
+
+
+	if (depth == 0 || board->scanCheckMate(color)) {
+		int eval = EvaluateGame(color);
+		if (board->scanCheckMate(!color)) eval += (maximizingPlayer) ? 100000 : -100000;
+		return  eval;
+	}
+
+	for ( auto& move : generateAllMoves(color)) {
+		if (beta1 <= alpha1)  break;
+
+		MoveResult result = board->makeMove(move);
+		if (!result.success)continue;
+
+		//check if result in checkmate
+		if (!board->scanChecks( color)) {
+			int eval = minimax( depth - 1, n, &alpha1, &beta1, !maximizingPlayer, moves);
+
+			// [5] Actualizar alpha/beta con logs
+			if (maximizingPlayer) {
+				bestEval = max(bestEval, eval);
+				alpha1 = max(alpha1, eval);
+			}
+			else {
+				bestEval = min(bestEval, eval);
+				beta1 = min(beta1, eval);
+			}
+			if (*n == depth && eval<10000 && eval > -10000) {
+				auto moveD1 = move;
+				moveD1.score = eval;
+				moves.push_back(moveD1);
+			}
+		}
+		//undo
+		board->undoMove();
+		if (beta1 <= alpha1)  break;
+
+	}
+	return bestEval;
+
+}
+
+Move Bot::botMove(bool turn) {
+
+	vector <Move> bestmoves;
+	auto start = std::chrono::high_resolution_clock::now();
+	//int bestscore = (turn == WHITE) ? 10000 : -10000;
+
+
+	int alpha = -10000, beta = 10000;
+	int depth = 5;
+
+	int score = minimax(depth, &depth, &alpha, &beta, (turn == bot) ? true : false, bestmoves);
+
+
+	/*for (int depth = 1; depth <= 5; depth++) {
+		//cout << "\n" << depth;
+		int alpha = -10000, beta = 10000;
+		vector<movement> moves;
+		int score = minimax(depth, &depth, &alpha, &beta, (turn == bot) ? true : false, moves);
+		if (score > bestscore) {
+			bestscore = score;
+			bestmoves.clear();
+			for (const auto& m : moves) {
+				if (bestscore == m.score) {
+					bestmoves.push_back(m);
 				}
 			}
-			//undo
-			unPassant(board, move, ep);
-			board->updateBoardPiece(move.destination.x, move.destination.y, move.destination.type, move.destination.color);
-			board->updateBoardPiece(move.source.x, move.source.y, move.source.type, move.source.color);
-			if (beta1 <= alpha1)  break;
-
 		}
-
-		if (maximizingPlayer) { /*if (depth>1)cout << "\nbot moving depth :" << depth << "    maxeval :" << maxEval;*/ return maxEval; }
-		if (!maximizingPlayer) { /* if (depth > 1)cout << "\nbot moving depth :" << depth << "    mineval :" << minEval;*/ return minEval; }
-	}
-}
-movement Game::botMove(Object::color_t c) {
-	int alpha = -10000, beta = 10000, n = 4; bool a = true;//despues de pruebas, 6 es el limite computable en corto tiempo
-	vector <movement> moves;
-
-	if (c == bot)a = true;
-	if (c == player)a = false;
-	int bestscore = minimax(n, &n, &alpha, &beta, a,  moves);
-
-	//selecciona uno de los mejores movimientos de forma randomizada
-	vector <movement> bestmoves;
-	for (const auto& m : moves) {
-		if ( bestscore == m.score) {
-			bestmoves.push_back(m);
+		auto end = std::chrono::high_resolution_clock::now();
+		if (std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() > 2000) {
+			cout << "\nTiempo: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms";
+			break;
 		}
-	}
+	}*/
+	//cout<<"\n best score:"<< bestscore;
+	
+
 
 	random_device rd;
 	mt19937 gen(rd());
 	uniform_int_distribution<size_t> dis(0, bestmoves.size() - 1);
 
-	movement bestmove = { bestmoves[dis(gen)] };
+	Move bestmove = { bestmoves[dis(gen)] };
 
 	return  bestmove;
 }
