@@ -16,6 +16,7 @@
 #include <omp.h>
 
 #include <fstream>
+#include <algorithm>
 
 #define WHITE_KINGSIDE  0x1
 #define WHITE_QUEENSIDE 0x2
@@ -50,41 +51,78 @@ typedef uint64_t Bitboard;
 
 struct ChessState {
 	// Bitboards por color y tipo [WHITE/BLACK][PIECE_TYPE]
-	Bitboard pieces[2][6] = { {0} };	 // 0:WHITE, 1:BLACK | 0:EMPTY,1:PAWN...6:KING
-	Bitboard enPassant =  0 ;       // Casilla de en passant
+	Bitboard pieces[2][6] = { {0} };
+	Bitboard enPassant =  0 ;
 	Bitboard castlingRights = 0;
+	Bitboard occupancy = 0;
+	Bitboard currentAttacks[2];
 	Bitboard selected = 0;
-	Bitboard occupancy = 0;			     // Todas las piezas (cache automático)
 	bool turn;
+
+	bool operator==(ChessState const& o) const {
+		if (turn != o.turn)            return false;
+		if (occupancy != o.occupancy)       return false;
+		if (enPassant != o.enPassant)       return false;
+		if (castlingRights != o.castlingRights)  return false;
+
+		// Compara el array de piezas
+		for (int c = 0; c < 2; ++c)
+			for (int pt = PAWN; pt <= KING; ++pt)
+				if (pieces[c][pt] != o.pieces[c][pt])
+					return false;
+
+		return true;
+	}
+
+	bool operator!=(ChessState const& o) const {
+		return !(*this == o);
+	}
+
 };
 struct Move {
-	int sourceSquare;    // 0-63
+	int sourceSquare;
 	int targetSquare;
-	int pieceType;       // PAWN, ROOK, etc
-	MoveType moveType;        // NORMAL, EN_PASSANT, CASTLING, PROMOTION
-	int promotionPiece = QUEEN; // Solo relevante para promociones
+	int pieceType;
+	MoveType moveType;
+	int promotionPiece = QUEEN;
 	int score;
 };
 struct MoveResult {
 	bool success;
-	int capturedPiece;    // Tipo de pieza capturada
-	bool capturedColor;    // Color de pieza capturada
-	Bitboard extraState;  // Para guardar info de en passant/roque
+	int capturedPiece;
+	bool capturedColor;
+	Bitboard extraState;
 };
 class Board {
 
 public:
+	// Definiciones de máscaras posicionales
+	static constexpr Bitboard CENTER_SQUARES = 0x0000001818000000ULL;
+	static constexpr Bitboard KING_ZONE_WHITE = 0x0000000000070707ULL;
+	static constexpr Bitboard KING_ZONE_BLACK = 0x0707000000000000ULL;
+	Bitboard PASSED_PAWN_MASKS[2][64];
 
-	static constexpr Bitboard FILE_A = 0x0101010101010101;
-	static constexpr Bitboard FILE_H = 0x8080808080808080;
-	static constexpr Bitboard RANK_1 = 0x00000000000000FFULL; // Fila 1 (bits 0-7)
-	static constexpr Bitboard RANK_2 = 0x000000000000FF00ULL;  // Fila 2 (bits 8-15)
-	static constexpr Bitboard RANK_3 = 0x0000000000FF0000ULL;  // Fila 3 (bits 16-23)
-	static constexpr Bitboard RANK_4 = 0x00000000FF000000ULL;  // Fila 4 (bits 24-31)
-	static constexpr Bitboard RANK_5 = 0x000000FF00000000ULL;  // Fila 5 (bits 32-39)
-	static constexpr Bitboard RANK_6 = 0x0000FF0000000000ULL;  // Fila 6 (bits 40-47)
-	static constexpr Bitboard RANK_7 = 0x00FF000000000000ULL;  // Fila 7 (bits 48-55)
-	static constexpr Bitboard RANK_8 = 0xFF00000000000000ULL;  // Fila 8 (bits 56-63)
+	static constexpr Bitboard FILE_MASKS[8] = {
+	0x0101010101010101ULL, // Columna a (file 0)
+	0x0202020202020202ULL, // Columna b (file 1)
+	0x0404040404040404ULL, // Columna c (file 2)
+	0x0808080808080808ULL, // Columna d (file 3)
+	0x1010101010101010ULL, // Columna e (file 4)
+	0x2020202020202020ULL, // Columna f (file 5)
+	0x4040404040404040ULL, // Columna g (file 6)
+	0x8080808080808080ULL  // Columna h (file 7)
+	};
+
+	static constexpr Bitboard RANK_MASKS[8] = {
+		0x00000000000000FFULL, // Fila 1 (rank 0)
+		0x000000000000FF00ULL, // Fila 2 (rank 1)
+		0x0000000000FF0000ULL, // Fila 3 (rank 2)
+		0x00000000FF000000ULL, // Fila 4 (rank 3)
+		0x000000FF00000000ULL, // Fila 5 (rank 4)
+		0x0000FF0000000000ULL, // Fila 6 (rank 5)
+		0x00FF000000000000ULL, // Fila 7 (rank 6)
+		0xFF00000000000000ULL  // Fila 8 (rank 7)
+	};
 
 	// Tablas mágicas para torres (precalculadas)
 	Bitboard rookMagics[64];
@@ -97,28 +135,37 @@ public:
 	int bishopIndexBits[64];	// Bits de índice para cada casilla
 
 
-	Bitboard pawnAttacks[2][64];    // [color][casilla]
+	Bitboard pawnAttacks[2][64];
 	Bitboard knightMoves[64];
 	Bitboard kingMoves[64];
 	Bitboard bishopMasks[64];
 	Bitboard rookMasks[64];
 
-	int N;	int M;	//tablero NxN
+	int N;	int M;
 	const bool Kramnik;
+	
+	
 
-	ChessState prevStates[256];  // Pila de estados anteriores
+	ChessState prevStates[500];  // Pila de estados anteriores
 	int moveCount = 0;
-
-
-
 	ChessState currentState;
+
+	Bitboard getAttackMap(bool color)const {
+		return currentState.currentAttacks[color];
+	}
+	void updateAttackMap() {
+		currentState.currentAttacks[0] = calculateAttackMap(0);
+		currentState.currentAttacks[1] = calculateAttackMap(1);
+	}
+
 
 
 	// Constructor principal
 	Board(int n, int m, bool k) : N(n), M(m), Kramnik(k) {
-		initBitboards();    // Inicializar todos los bitboards a 0
-		setBitboards();     // Inicializar los bitboards con la configuración deseada
-		initAttackTables(); // Inicializar los bitboards de máscaras de ataque
+		initBitboards();
+		setBitboards();
+		initAttackTables();
+		updateAttackMap();
 
 	}
 	// Constructor de copia
@@ -126,7 +173,7 @@ public:
 		memcpy(&currentState, &other.currentState, sizeof(ChessState));
 	}
 
-	// Destructor (ya no necesita liberar memoria manualmente)
+	// Destructor
 	~Board() = default;
 
 
@@ -134,16 +181,16 @@ public:
 
 	void printBoard( Bitboard piece)const;
 	
-	//move generation
+
+
+	//logica basica de generacion de movimientos
 	Bitboard getPieces(bool color) const {
 		return currentState.pieces[color][0] | currentState.pieces[color][1] |
 			currentState.pieces[color][2] | currentState.pieces[color][3] |
 			currentState.pieces[color][4] | currentState.pieces[color][5];
 	}
 	void initAttackTables();
-	
-	
-	
+	void initPositionalMasks();
 
 	Bitboard generatePawnMoves(int,bool)const;
 	Bitboard generateRookMoves(int,bool) const;
@@ -183,22 +230,37 @@ public:
 
 	//funciones asociadas a la verificacion de movimientos
 	Bitboard calculateAttackMap(bool color) const;
-	Bitboard generateAttacksFrom(int sq, bool color) const;
-	vector<Move> generateAllMoves(bool) ;
-	
-	bool isLegalmove( Move&) ;
+	Bitboard generateAttacksFrom(int sq, bool ) const;
+	Bitboard generateMovesFrom(int, bool) const;
+	Bitboard getMovementMap(bool);
+
 
 	MoveResult makeMove( Move&);
 	void undoMove();
 	MoveType determineMoveType(const Move& move)const;
 
-
 	bool scanChecks(bool, Bitboard&);
 	bool scanChecks(bool);
 	bool scanCheckMate(bool);
+	bool scanDraw();
 	bool canKingMove(bool);
 	bool canCaptureAttacker(bool, Bitboard);
 	bool canBlockAttacker(bool, Bitboard);
+
+	Bitboard getPath(int, int,int);
+	bool checkRays(int,int,int, bool);
+
+	bool isLegalmove(Move&);
+
+	vector<Move> generateAllMoves(bool);
+	vector<Move> generateCaptureMoves(bool);
+	vector<Move> generateCheckMoves(bool);
+	/*vector<Move> generateNormalMoves(bool);
+	vector<Move> generateEscapeMoves(bool, Bitboard);
+	vector<Move> generateKingMove(bool);
+	vector<Move> generateCaptureAttacker(bool, Bitboard);
+	vector<Move> generateBlockAttacker(bool, Bitboard);*/
+
 
 
 	//bitboard to interface
@@ -214,6 +276,7 @@ public:
 	void BitboardSetPiece(int, int, int, bool);
 	int BitboardGetColor(int, int)const;
 	int BitboardGetColor(int) const;
+	int BitboardGetColor(int,ChessState) const;
 	int BitboardGetType(int, int)const;
 	int BitboardGetType(int) const;
 
@@ -231,13 +294,6 @@ public:
 	int getSizeY() { return N; }
 	int getSizeX() { return M; }
 
-
-	int countBits(Bitboard b) {
-		// Método SWAR (5 operaciones para 64 bits)
-		b = b - ((b >> 1) & 0x5555555555555555);
-		b = (b & 0x3333333333333333) + ((b >> 2) & 0x3333333333333333);
-		return ((b + (b >> 4)) & 0x0F0F0F0F0F0F0F0F) * 0x0101010101010101 >> 56;
-	}
 	//LSB
 	static int portable_ctzll(uint64_t b) {
 		if (b == 0) return 64;
@@ -265,16 +321,21 @@ public:
 		int x = sq % 8, y = sq / 8;
 		return (x >= 2 && x <= 5 && y >= 2 && y <= 5); // Casillas centrales
 	}
+	
 	// Función auxiliar de desplazamiento seguro
-	Bitboard shift(Bitboard b, int dir) const {
-		if (dir > 0) return b << dir;   // Desplazamiento hacia arriba (blancas)
-		else return b >> (-dir);        // Desplazamiento hacia abajo (negras)
-	}
+Bitboard shift(Bitboard b, int dir)const{
+	if (dir > 0) return b << dir;   // Desplazamiento hacia arriba (blancas)
+	else return b >> (-dir);        // Desplazamiento hacia abajo (negras)
+}
 
+int countBits(Bitboard b) {
+	// Método SWAR (5 operaciones para 64 bits)
+	b = b - ((b >> 1) & 0x5555555555555555);
+	b = (b & 0x3333333333333333) + ((b >> 2) & 0x3333333333333333);
+	return ((b + (b >> 4)) & 0x0F0F0F0F0F0F0F0F) * 0x0101010101010101 >> 56;
+}
 };
 
 
 
-
 #endif
-
