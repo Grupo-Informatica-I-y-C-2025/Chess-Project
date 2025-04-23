@@ -4,14 +4,14 @@
 
 
 Bitboard Board::generateAttacksFrom(int sq, bool color) const {
-	int pieceType = BitboardGetType(sq % 8, sq / 8);
+	int pieceType = BitboardGetType(sq);
 	switch (pieceType) {
-	case PAWN: return pawnAttacks[color][sq];
-	case KNIGHT: return knightMoves[sq];
+	case PAWN: return pawnAttacks[color][sq] ;
+	case KNIGHT: return generateKnightMoves(sq,color);
 	case BISHOP: return generateBishopMoves(sq, color);
 	case ROOK: return generateRookMoves(sq, color);
 	case QUEEN: return generateQueenMoves(sq, color);
-	case KING: return kingMoves[sq];
+	case KING: return generateKingMoves(sq,color);
 	default: return 0;
 	}
 }
@@ -28,89 +28,234 @@ Bitboard Board::calculateAttackMap(bool color) const {
 }
 
 
-vector<Move> Board::generateAllMoves(bool color) {  // Removido 'const'
-	vector<Move> allMoves;
-	for (int source = 0; source < 64; ++source) {
-		int pieceType = BitboardGetType(source % 8, source / 8);
-		if (pieceType == 6) continue;
-
-		Bitboard movesBB;
-
-		switch (pieceType) {
-		case PAWN:		movesBB = generatePawnMoves(source, color); break;
-		case KNIGHT:	movesBB = generateKnightMoves(source, color); break;
-		case BISHOP:	movesBB = generateBishopMoves(source, color); break;
-		case ROOK:		movesBB = generateRookMoves(source, color); break;
-		case QUEEN:		movesBB = generateQueenMoves(source, color); break;
-		case KING:		movesBB = generateKingMoves(source, color); break;
-		default:		movesBB = 0; break;
+Bitboard Board::generateMovesFrom(int sq, bool color) const {
+	int pieceType = BitboardGetType(sq);
+	switch (pieceType) {
+	case PAWN: return generatePawnMoves(sq, color);
+	case KNIGHT: return generateKnightMoves(sq, color);
+	case BISHOP: return generateBishopMoves(sq, color);
+	case ROOK: return generateRookMoves(sq, color);
+	case QUEEN: return generateQueenMoves(sq, color);
+	case KING: return generateKingMoves(sq, color);
+	default: return 0;
+	}
+}
+Bitboard Board::getMovementMap(bool color) {
+	Bitboard movementMap = 0;
+	for (int pt = PAWN; pt <= KING; pt++) {
+		Bitboard pieces = currentState.pieces[color][pt];
+		while (pieces) {
+			int sq = portable_ctzll(pieces);
+			movementMap |= generateMovesFrom(sq, color);
+			pieces &= pieces - 1;
 		}
-		//printBoard(movesBB);
+	}
+	return movementMap & ~getPieces(color); // Excluye casillas ocupadas por propias
+}
+
+
+vector<Move> Board::generateAllMoves(bool color) {
+	vector<Move> allMoves;
+	Bitboard kingBB = currentState.pieces[color][KING];
+	if (!kingBB) return allMoves;
+
+	for (int source = 0; source < 64; ++source) {
+		if (BitboardGetColor(source) != color)continue;
+		int pieceType = BitboardGetType(source);
+
+		Bitboard movesBB = generateMovesFrom(source,color);
+
 		while (movesBB) {
 			int target = portable_ctzll(movesBB);
 			movesBB &= movesBB - 1;
 			Move move = { source, target, pieceType, DEFAULT };
 
-			// Aplicar movimiento temporalmente
-			MoveResult result = makeMove(move);
-			if (result.success) {
-				// Verificar si el rey está en jaque después del movimiento
-				bool inCheck = scanChecks(color);
-				if (!inCheck) {
-					allMoves.push_back(move);
-				}
-				undoMove();  // Revertir el movimiento
-			}
+			if(isLegalmove(move))allMoves.push_back(move);
 		}
 	}
 	return allMoves;
 }
+vector<Move> Board::generateCaptureMoves(bool color) {
+	vector<Move> allMoves;
+	Bitboard kingBB = currentState.pieces[color][KING];
+	if (!kingBB) return allMoves;
+	Bitboard enemyPieces = getPieces(!color) | currentState.enPassant;
+
+	for (int source = 0; source < 64; ++source) {
+		if (BitboardGetColor(source) != color)continue;
+		int pieceType = BitboardGetType(source);
+
+		Bitboard movesBB = generateAttacksFrom(source, color);
+		movesBB &= enemyPieces;
+
+		while (movesBB) {
+			int target = portable_ctzll(movesBB);
+			movesBB &= movesBB - 1;
+			Move move = { source, target, pieceType, DEFAULT };
+
+			if (isLegalmove(move))allMoves.push_back(move);
+		}
+	}
+	return allMoves;
+}
+vector<Move> Board::generateCheckMoves(bool color) {
+	vector<Move> allMoves;
+	Bitboard kingBB = currentState.pieces[color][KING];
+	if (!kingBB) return allMoves;
+
+	int kingSquare = portable_ctzll(currentState.pieces[color][KING]);
+
+	for (int source = 0; source < 64; ++source) {
+		if (BitboardGetColor(source) != color)continue;
+		int pieceType = BitboardGetType(source);
+
+		Bitboard movesBB = generateAttacksFrom(source, color);
+
+		while (movesBB) {
+			int target = portable_ctzll(movesBB);
+			movesBB &= movesBB - 1;
+			Move move = { source, target, pieceType, DEFAULT };
+
+			if (isLegalmove(move))allMoves.push_back(move);
+		}
+	}
+	return allMoves;
+}
+
+/*vector<Move> Board::generateAllMoves(bool color) {
+	vector<Move> legalMoves;
+	Bitboard attackers;
+
+	/*if (scanChecks(color, attackers)) {
+		//cout << "\n hay jaque";
+		legalMoves = generateEscapeMoves(color, attackers);
+	}
+	else {
+	//cout << "\n no hay jaque";
+legalMoves = generateNormalMoves(color);
+//}
+return legalMoves;
+}*/
+
+/*vector<Move> Board::generateEscapeMoves(bool color, Bitboard attackers) {
+	
+	vector<Move> kingMoves = generateKingMove(color);
+	if (countBits(attackers) > 1)return kingMoves;//si es ataque doble retorna solo movimientos de rey
+	vector<Move> captureMoves = generateCaptureAttacker(color, attackers);
+	vector<Move> blockMoves = generateBlockAttacker(color, attackers);
+
+	kingMoves.reserve(kingMoves.size() + captureMoves.size() + blockMoves.size());
+	kingMoves.insert(kingMoves.end(), captureMoves.begin(), captureMoves.end());
+	kingMoves.insert(kingMoves.end(), blockMoves.begin(), blockMoves.end());
+	return kingMoves;
+}
+vector<Move> Board::generateKingMove(bool color) {
+	vector<Move> allMoves;
+	Bitboard kingBB = currentState.pieces[color][KING];
+	if (!kingBB)return allMoves;
+
+	int kingSquare = portable_ctzll(kingBB);
+
+	Bitboard kingmoves = generateKingMoves(kingSquare, color);
+
+	kingmoves &= ~getPieces(color);
+
+	while (kingmoves) {
+		int targetSquare = portable_ctzll(kingmoves);
+		kingmoves &= kingmoves - 1;
+		Move move = { kingSquare, targetSquare, KING, DEFAULT };
+		if (isLegalmove(move)) {
+			//cout << "\n movimiento de rey: " << kingSquare << " " << targetSquare;
+			allMoves.push_back(move);
+		}
+	}
+	//if (allMoves.size() == 0)cout << "\n no hay movimientos de rey";
+	return allMoves;
+}
+vector<Move> Board::generateCaptureAttacker(bool color, Bitboard attackerBB) {
+	vector<Move> allMoves;
+	int attackerSquare = portable_ctzll(attackerBB);
+	int kingSquare = portable_ctzll(currentState.pieces[color][KING]);
+
+	Bitboard myAttackMap = getAttackMap(color);
+	if (!(myAttackMap & attackerBB))return allMoves;
+
+	for (int type = PAWN; type <= KING; type++) {
+		Bitboard pieces = currentState.pieces[color][type];
+		while (pieces) {
+			int capturer = portable_ctzll(pieces);
+			pieces &= pieces - 1;
+
+			Move move = { capturer, attackerSquare, type, DEFAULT };
+			if (isLegalmove(move)) {
+				//cout << "\n movimiento de captura: " << capturer << " " << attackerSquare;
+				allMoves.push_back(move);
+			}
+		}
+	}
+	//if (allMoves.size() == 0)cout << "\n no hay movimientos de captura";
+	return allMoves;
+}
+vector<Move> Board::generateBlockAttacker(bool color, Bitboard attackerBB) {
+	vector<Move> allMoves;
+	int kingSquare = portable_ctzll(currentState.pieces[color][KING]);
+	int attackerSquare = portable_ctzll(attackerBB);
+	int attackerType = BitboardGetType(attackerSquare);
+	if (attackerType != BISHOP && attackerType != ROOK && attackerType != QUEEN) return allMoves;
+
+	Bitboard path = getPath(kingSquare, attackerSquare, attackerType);
+	Bitboard myMovementMap = getMovementMap(color);
+	Bitboard blockingSquares = path & myMovementMap;
+	if (!blockingSquares)return allMoves;
+
+
+
+	while (blockingSquares) {
+		int blockSq = portable_ctzll(blockingSquares);
+
+		for (int type = PAWN; type <= KING; type++) {
+			Bitboard pieces = currentState.pieces[color][type];
+			while (pieces) {
+				int blocker = portable_ctzll(pieces);
+				pieces &= pieces - 1;
+				
+				Move move = { blocker, attackerSquare, type, DEFAULT };
+				if (isLegalmove(move)) {
+					//cout << "\n movimiento de bloqueo: " << blocker << " " << attackerSquare;
+					allMoves.push_back(move);
+				}
+			}
+		}
+		blockingSquares &= blockingSquares - 1;
+	}
+	//if (allMoves.size() == 0)cout << "\n no hay movimientos de bloqueo";
+	return allMoves;
+}*/
+
+
+
+
+
+
+
 bool Board::isLegalmove(Move& move) {
-	// 1. Verificar turno y pieza en casilla origen
-	int color = currentState.turn;
+
+	bool color = currentState.turn;
 	Bitboard sourceBB = 1ULL << move.sourceSquare;
 	if (!(currentState.pieces[color][move.pieceType] & sourceBB)) {
 		return false;
 	}
 
-	int pieceType = BitboardGetType(move.sourceSquare % 8, move.sourceSquare / 8);
-	if (pieceType == 6) return false;
+	Bitboard movesBB = generateMovesFrom(move.sourceSquare, color) & ~getPieces(color);
+	if (!(movesBB & (1ULL << move.targetSquare)))return false;
 
-	Bitboard movesBB;
-
-	switch (pieceType) {
-	case PAWN:		movesBB = generatePawnMoves(move.sourceSquare, color); break;
-	case KNIGHT:	movesBB = generateKnightMoves(move.sourceSquare, color); break;
-	case BISHOP:	movesBB = generateBishopMoves(move.sourceSquare, color); break;
-	case ROOK:		movesBB = generateRookMoves(move.sourceSquare, color); break;
-	case QUEEN:		movesBB = generateQueenMoves(move.sourceSquare, color); break;
-	case KING:		movesBB = generateKingMoves(move.sourceSquare, color); break;
-	default:		movesBB = 0; break;
-	}
-
-	move.moveType = determineMoveType(move);
-
-	// Aplicar movimiento temporalmente
 	MoveResult result = makeMove(move);
-	if (result.success) {
-		// Verificar si el rey está en jaque después del movimiento
-		bool inCheck = scanChecks(color);
-		undoMove();  // Revertir el movimiento
-		if (inCheck) return false;
-
-	}
-
-	switch (move.moveType) {
-	case PROMOTION:cout << "\npromotion"; break;
-	case CASTLING:cout << "\ncastling"; break;
-	case EN_PASSANT:cout << "\n en passant"; break;
-	case CAPTURE:cout << "\ncaptura"; break;
-	case DEFAULT:cout << "\nnormal move"; break;
-	}
-	return true;
+	if (!result.success) return false;
+	bool inCheck = scanChecks(color);
+	undoMove();
+	
+	return inCheck ? false : true;
 }
-
-
 MoveType Board::determineMoveType(const Move& move) const {
 	const bool color = currentState.turn ? BLACK : WHITE;
 	const Bitboard targetBB = 1ULL << move.targetSquare;
@@ -157,23 +302,12 @@ MoveResult Board::makeMove( Move& move) {
 	Bitboard target = 1ULL << move.targetSquare;
 	bool color = currentState.turn ? BLACK : WHITE;
 
-	// 2. Verificar movimiento válido
-	Bitboard validMoves;
-	switch (move.pieceType) {
-	case PAWN:   validMoves = generatePawnMoves(move.sourceSquare,color); break;
-	case KNIGHT: validMoves = generateKnightMoves(move.sourceSquare, color); break;
-	case BISHOP: validMoves = generateBishopMoves(move.sourceSquare, color);break;
-	case ROOK:	 validMoves = generateRookMoves(move.sourceSquare, color);break;
-	case QUEEN:	validMoves = generateQueenMoves(move.sourceSquare, color);break;
-	case KING:	validMoves = generateKingMoves(move.sourceSquare,color) | generateCastlingMoves(color);break;
-	default:	break;
-	}
-	if (!(validMoves & target)) return result;
-
 	// 3. Guardar estado actual
+	if (moveCount >= 500) {
+		return result;
+	}
 	prevStates[moveCount] = currentState;
 	moveCount++;
-
 	// 4. Realizar movimiento base
 	currentState.pieces[color][move.pieceType] ^= source | target;
 	currentState.occupancy ^= source | target;
@@ -236,6 +370,11 @@ MoveResult Board::makeMove( Move& move) {
 	
 
 	// 6. Actualizar estado del juego
+	currentState.occupancy = 0;
+	for (int i = PAWN; i <= KING; i++) {
+		currentState.occupancy |= currentState.pieces[color][i] | currentState.pieces[!color][i];
+	}
+	updateAttackMap();
 	currentState.enPassant = (move.pieceType == PAWN && abs(move.targetSquare - move.sourceSquare) == 16)
 		? color? (1ULL << (move.sourceSquare - 8)): (1ULL << (move.sourceSquare + 8)) : 0;
 
@@ -245,7 +384,7 @@ MoveResult Board::makeMove( Move& move) {
 }
 void Board::undoMove() {
 	if (moveCount == 0) return;
-
+	//cout << "\n move count :" << moveCount;
 	moveCount--;
 	currentState = prevStates[moveCount];
 }
@@ -255,9 +394,10 @@ void Board::undoMove() {
 
 void Board::initAttackTables() {
 
-	initBishopMagics();
-	initRookMagics();
+	//initBishopMagics();
+	//initRookMagics();
 
+	initPositionalMasks();
 
 	// Precalcular ataques de peones
 	for (int sq = 0; sq < 64; ++sq) {
@@ -318,7 +458,6 @@ void Board::initAttackTables() {
 			}
 		}
 	}
-	/*
 	// Precalcular máscaras de alfil (direcciones diagonales)
 	for (int sq = 0; sq < 64; ++sq) {
 		bishopMasks[sq] = 0;
@@ -362,46 +501,40 @@ void Board::initAttackTables() {
 				cy += dy;
 			}
 		}
-	}*/
+	}
+}
+
+void Board::initPositionalMasks() {
+	// Precalcular máscaras para peones pasados
+	for (int color = WHITE; color <= BLACK; ++color) {
+		for (int sq = 0; sq < 64; ++sq) {
+			int file = sq % 8;
+			PASSED_PAWN_MASKS[color][sq] = (FILE_MASKS[file] | FILE_MASKS[std::max(0, file - 1)] | FILE_MASKS[std::min(7, file + 1)])
+				& (color == WHITE ? ~RANK_MASKS[sq / 8] : RANK_MASKS[sq / 8]);
+		}
+	}
 }
 
 Bitboard Board::generatePawnMoves(int sq, bool color) const {
 	Bitboard moves = 0;
+	const int x = sq % 8;
+	const int y = sq / 8;
+
 	const Bitboard pawn = 1ULL << sq;
-	const Bitboard empty = ~currentState.occupancy;
 	const Bitboard enemies = getPieces(!color) | currentState.enPassant;
+	const Bitboard empty = ~currentState.occupancy;
+
 	const int forward = (color == WHITE) ? 8 : -8;
-
-	// Movimiento simple (1 casilla)
 	Bitboard singlePush = shift(pawn, forward) & empty;
-	moves |= singlePush; // <- Añadir esta línea para incluir el movimiento simple
+	moves |= singlePush;
 
-	// Movimiento doble (solo si está en fila inicial)
-	Bitboard startRank = (color == WHITE) ? RANK_2 : RANK_7;
-	if ((pawn & startRank) && singlePush) { // Verificar que singlePush sea válido
+	if ((color == WHITE && y == 1) || (color == BLACK && y == 6)) {
 		Bitboard doublePush = shift(singlePush, forward) & empty;
 		moves |= doublePush;
 	}
 
-	// Capturas diagonales (corregir direcciones y máscaras)
-	Bitboard leftCapture = 0, rightCapture = 0;
-	if (color == WHITE) {
-		leftCapture = (pawn << 9) & ~FILE_A & enemies;  // Diagonal izquierda (no FILE_A)
-		rightCapture = (pawn << 7) & ~FILE_H & enemies;  // Diagonal derecha (no FILE_H)
-	}
-	else {
-		
-		leftCapture = (pawn >> 7) & ~FILE_A & enemies;  // Diagonal derecha (no FILE_A)
-		rightCapture = (pawn >> 9) & ~FILE_H & enemies;  // Diagonal izquierda (no FILE_H)
-	}
-	moves |= leftCapture | rightCapture;
-
-	// En passant
-	/*if (currentState.enPassant & (leftCapture | rightCapture)) {
-		printBoard(leftCapture);
-		printBoard(rightCapture);
-		moves |= currentState.enPassant;
-	}*/
+	// Capturas usando máscaras precalculadas
+	moves |= pawnAttacks[color][sq] & enemies;
 
 	return moves;
 }
@@ -409,70 +542,37 @@ Bitboard Board::generateRookMoves(int sq, bool color) const {
 	Bitboard occupancy = currentState.occupancy;
 	Bitboard rook = 1ULL << sq;
 
-	// 1. Obtener ataques precalculados
-	//magic
-	/*Bitboard maskedOccupancy = occupancy & rookMasks[sq];
-	int index = (maskedOccupancy * rookMagics[sq]) >> (64 - rookIndexBits[sq]);
-	Bitboard attacks = rookAttacks[sq][index];*/
-
-	//precalculado
 	Bitboard maskedOccupancy = occupancy & rookMasks[sq];
 	Bitboard attacks = getRookAttacksSlow(sq, maskedOccupancy);
 
-
-	// 2. Filtrar piezas aliadas y bloquear detrás de enemigas
-	Bitboard friendly = getPieces(color);
-	//Bitboard enemies = getPieces(!color);
-
-	
-	/*Bitboard blockers = enemies & attacks;
-	while (blockers) {
-		int blocker_sq = portable_ctzll(blockers);
-		Bitboard blocker_mask = ~((1ULL << blocker_sq) - 1); // Máscara para todo lo que está después del bloqueador
-		attacks &= ~(rookMasks[sq] & blocker_mask);
-		blockers &= blockers - 1;
-	}*/
-	return attacks & ~friendly; // Excluir piezas propias
+	return attacks;
 }
 Bitboard Board::generateBishopMoves(int sq, bool color) const {
 	Bitboard occupancy = currentState.occupancy;
 	Bitboard bishop = 1ULL << sq;
 
-	// 1. Máscara de ataque base (excluyendo bordes)
-
-	/*	int index = (maskedOccupancy * bishopMagics[sq]) >> (64 - bishopIndexBits[sq]);
-	Bitboard attacks = bishopAttacks[sq][index];*/ 
-
 	Bitboard maskedOccupancy = occupancy & bishopMasks[sq];
 	Bitboard attacks = getBishopAttacksSlow(sq, maskedOccupancy);
 
-
-
-	// 4. Filtrar piezas propias
-	Bitboard friendly = getPieces(color);
-	return attacks & ~friendly;
+	return attacks;
 }
 Bitboard Board::generateKnightMoves(int sq, bool color) const {
     Bitboard moves = knightMoves[sq];
-    Bitboard friendly = getPieces(color);
-    return moves & ~friendly; // Solo excluir casillas con piezas propias
+    return moves;
 }
 Bitboard Board::generateQueenMoves(int sq, bool color) const {
 	return generateRookMoves(sq, color) | generateBishopMoves(sq, color);
 }
 Bitboard Board::generateKingMoves(int sq, bool color) const {
-	Bitboard moves = kingMoves[sq]; // Movimientos precalculados para "sq"
-	Bitboard friendly = getPieces(color);
-	moves &= ~friendly; // Filtrar casillas ocupadas por propias
-
-	// Eliminar casillas bajo ataque enemigo
-	Bitboard enemyAttacks = calculateAttackMap(!color);
+	Bitboard moves = kingMoves[sq]| generateCastlingMoves(color);
+	Bitboard enemyAttacks = getAttackMap(!color);
 	return moves & ~enemyAttacks;
 }
 Bitboard Board::generateCastlingMoves(bool color) const {
 	Bitboard castling = 0;
+	if (!currentState.castlingRights)return castling;
 	const Bitboard occupancy = currentState.occupancy;
-	const Bitboard attacks = calculateAttackMap(!color);
+	const Bitboard attacks = getAttackMap(!color);
 
 	// Kingside castling
 	if (currentState.castlingRights & (color ? BLACK_KINGSIDE : WHITE_KINGSIDE)) {
@@ -585,7 +685,7 @@ bool Board::scanChecks(bool color, Bitboard& attackers) {
 
 
 	// Calcular ataques enemigos al cuadrado del rey
-	Bitboard attackersBB = calculateAttackMap(!color) & kingBB;
+	Bitboard attackersBB = getAttackMap(!color) & kingBB;
 
 	if (!attackersBB) return false;
 
@@ -606,8 +706,15 @@ bool Board::scanChecks(bool color, Bitboard& attackers) {
 	return true;
 }
 bool Board::scanChecks(bool color) {
-	Bitboard null = 0;
-	return scanChecks(color, null);
+	Bitboard kingBB = currentState.pieces[color][KING];
+	if (!kingBB) return true;
+
+	// Calcular ataques enemigos al cuadrado del rey
+	Bitboard attackersBB = getAttackMap(!color) & kingBB;
+
+	if (!attackersBB) return false;
+
+	return true;
 }
 
 bool Board::canKingMove(bool color) {
@@ -626,151 +733,175 @@ bool Board::canKingMove(bool color) {
 	// Probar cada movimiento potencial
 	while (kingmoves) {
 		int targetSquare = portable_ctzll(kingmoves);
+		//cout << "\n king moves :" << kingmoves;
 		kingmoves &= kingmoves - 1;
 
-		// Crear movimiento temporal
-		Move move;
-		move.sourceSquare = kingSquare;
-		move.targetSquare = targetSquare;
-		move.pieceType = KING;
-		move.moveType = DEFAULT; // El tipo se determinará automáticamente
+		if ((1ULL << targetSquare) & getAttackMap(!color))continue;
 
-		// Hacer el movimiento temporalmente
-		MoveResult result = makeMove(move);
-		if (!result.success) continue;
-
-		// Verificar si el rey sigue en jaque después del movimiento
-		Bitboard newKingBB = currentState.pieces[color][KING];
-		int newKingSquare = portable_ctzll(newKingBB);
-		bool inCheck = (calculateAttackMap(!color) & newKingBB) != 0;
-
-		// Deshacer el movimiento
-		undoMove();
-
-		// Si encontramos al menos un movimiento que no deja al rey en jaque
-		if (!inCheck) {
-			return true;
-		}
+		if (checkRays(kingSquare,targetSquare,targetSquare, color))return true;
 	}
 
 	return false;
 }
+
 bool Board::canCaptureAttacker(bool color, Bitboard attackerBB) {
-	// Get the attacker's square
 	int attackerSquare = portable_ctzll(attackerBB);
+	int kingSquare = portable_ctzll(currentState.pieces[color][KING]);
 
-	// Generate all moves for the current color
-	vector<Move> moves = generateAllMoves(color);
+	Bitboard myAttackMap = getAttackMap(color);
+	if (!(myAttackMap & attackerBB)) return false;
 
-	// Check if any move can capture the attacker
-	for (const Move& move : moves) {
-		if (move.targetSquare == attackerSquare) {
-			// Temporarily make the move
-			MoveResult result = makeMove(const_cast<Move&>(move));
-			if (!result.success) continue;
+	for (int type = PAWN; type <= KING; type++) {
+		Bitboard pieces = currentState.pieces[color][type];
+		while (pieces) {
+			int capturer = portable_ctzll(pieces);
+			pieces &= pieces - 1;
 
-			// Check if king is still in check after the move
-			Bitboard kingBB = currentState.pieces[color][KING];
-			bool stillInCheck = (calculateAttackMap(!color) & kingBB);
+			Bitboard attacksBB = generateAttacksFrom(capturer, color);
 
-			// Undo the move
-			undoMove();
+			//si la pieza no ataca a attackers, omite el retso del bucle
+			if (!(attacksBB & attackerBB))continue;
 
-			if (!stillInCheck) {
-				return true;
-			}
+
+			if (!checkRays(capturer, attackerSquare, kingSquare, color))continue;
+			return true;
 		}
 	}
 	return false;
 }
 bool Board::canBlockAttacker(bool color, Bitboard attackerBB) {
-	Bitboard kingBB = currentState.pieces[color][KING];
-	if (!kingBB) return false;
-
-	int kingSquare = portable_ctzll(kingBB);
+	int kingSquare = portable_ctzll(currentState.pieces[color][KING]);
 	int attackerSquare = portable_ctzll(attackerBB);
+	int attackerType = BitboardGetType(attackerSquare);
 
-	// Get the path between king and attacker (for sliding pieces)
-	int attackerType = BitboardGetType(attackerSquare % 8, attackerSquare / 8);
+	if (attackerType != BISHOP && attackerType != ROOK && attackerType != QUEEN) return false;
 
-	// Only sliding pieces (queen, rook, bishop) can be blocked
-	if (attackerType != QUEEN && attackerType != ROOK && attackerType != BISHOP) {
-		return false;
+	Bitboard path = getPath(kingSquare, attackerSquare, attackerType);
+	Bitboard myMovementMap = getMovementMap(color);
+	Bitboard blockingSquares = path & myMovementMap;
+	if (!blockingSquares)return false;
+
+
+
+
+	while (blockingSquares) {
+		int blockSq = portable_ctzll(blockingSquares);
+
+		for (int type = PAWN; type <= KING; type++) {
+			Bitboard pieces = currentState.pieces[color][type];
+			while (pieces) {
+				int blocker = portable_ctzll(pieces);
+				pieces &= pieces - 1;
+				Bitboard MovesBB = generateMovesFrom(blocker, color);
+
+				//si la pieza no ataca a blocksq, omite el retso del bucle
+				if (!(MovesBB & (1ULL<<blockSq)))continue;
+
+				if (checkRays(blocker,blockSq,kingSquare, color))return true;
+
+			}
+		}
+	blockingSquares &= blockingSquares - 1;
+	}
+	return false;
+}
+Bitboard Board::getPath(int kingSquare, int attackerSquare, int attackerType) {
+	int dx = abs((kingSquare % 8) - (attackerSquare % 8));
+	int dy = abs((kingSquare / 8) - (attackerSquare / 8));
+
+	// Verificar alineación según el tipo de pieza
+	if (attackerType == BISHOP && dx != dy) return 0;
+	if (attackerType == ROOK && dx != 0 && dy != 0) return 0;
+	if (attackerType == QUEEN && (dx != dy && dx != 0 && dy != 0)) return 0;
+
+	int stepX = (attackerSquare % 8 > kingSquare % 8) ? 1 : -1;
+	int stepY = (attackerSquare / 8 > kingSquare / 8) ? 1 : -1;
+	if (dx == 0) stepX = 0;
+	if (dy == 0) stepY = 0;
+
+	Bitboard path = 0;
+	int current = kingSquare;
+	while (true) {
+		current += stepY * 8 + stepX;
+		if (current == attackerSquare) break;
+		if (current < 0 || current >= 64) return 0;
+		path |= 1ULL << current;
+	}
+	return path;
+}
+//añadir en passant
+bool Board::checkRays(int source, int target, int King, bool color) {
+	Bitboard newOccupancy = currentState.occupancy;
+	newOccupancy &= ~(1ULL << source);  // Eliminar la pieza de origen
+
+	// Si la pieza que se mueve es el rey, actualizar su posición
+	bool isKingMove = (source == King);
+	if (isKingMove) {
+		newOccupancy &= ~(1ULL << source); // Eliminar posición original del rey
+		newOccupancy |= (1ULL << target);   // Añadir nueva posición
+		King = target; // Actualizar la posición del rey para el cálculo
+	}
+	else {
+		newOccupancy |= (1ULL << target);   // Añadir pieza al destino
 	}
 
-	// Calculate the path squares between king and attacker
-	vector<int> pathSquares;
-	int dx = (attackerSquare % 8) - (kingSquare % 8);
-	int dy = (attackerSquare / 8) - (kingSquare / 8);
+	// Verificar ataques de piezas alineadas (BISHOP, ROOK, QUEEN)
+	for (int piece = BISHOP; piece <= QUEEN; piece++) {
+		Bitboard rays = currentState.pieces[!color][piece];
+		while (rays) {
+			int attackerSq = portable_ctzll(rays);
+			rays &= rays - 1;
 
-	dx = (dx > 0) ? 1 : (dx < 0) ? -1 : 0;
-	dy = (dy > 0) ? 1 : (dy < 0) ? -1 : 0;
+			if (attackerSq == target) continue; // La pieza movida puede ser capturada
 
-	int x = kingSquare % 8 + dx;
-	int y = kingSquare / 8 + dy;
+			Bitboard path = getPath(King, attackerSq, piece);
+			if (!path) continue; // No está alineado
 
-	while (x != attackerSquare % 8 || y != attackerSquare / 8) {
-		pathSquares.push_back(y * 8 + x);
-		x += dx;
-		y += dy;
-	}
-
-	// Check if any piece can move to a square in the path
-	vector<Move> moves = generateAllMoves(color);
-	for (const Move& move : moves) {
-		for (int square : pathSquares) {
-			if (move.targetSquare == square) {
-				// Temporarily make the move
-				MoveResult result = makeMove(const_cast<Move&>(move));
-				if (!result.success) continue;
-
-				// Check if king is still in check after the move
-				kingBB = currentState.pieces[color][KING];
-				bool stillInCheck = (calculateAttackMap(!color) & kingBB);
-
-				// Undo the move
-				undoMove();
-
-				if (!stillInCheck) {
-					return true;
-				}
+			// Verificar si el camino está bloqueado en el nuevo tablero
+			if ((path & newOccupancy) == 0) {
+				return false; // Camino despejado: jaque no bloqueado
 			}
 		}
 	}
-
-	return false;
+	return true; // No hay jaques por piezas alineadas
 }
+
+
 bool Board::scanCheckMate(bool color) {
 	Bitboard attackers;
 	bool inCheck = scanChecks(color, attackers);
-
+	//cout << "\nin check?";
 	if (!inCheck) return false; // Not in check, so not checkmate
 
+	//cout << "\ndouble attack?";
 	// If there are multiple attackers, only king moves can help
 	if (countBits(attackers) > 1) {
 		return !canKingMove(color);
 	}
-
+	//cout << "\nking can move?";
 	// Check if king can move out of check
 	if (canKingMove(color)) {
 		return false;
 	}
-
+	//cout << "\ncan capture attacker?";
 	// Check if attacker can be captured
 	if (canCaptureAttacker(color, attackers)) {
 		return false;
 	}
 
+	//cout << "\ncan block attackers?";
 	// Check if attack can be blocked (only for sliding pieces)
-	int attackerSquare = portable_ctzll(attackers);
-	int attackerType = BitboardGetType(attackerSquare % 8, attackerSquare / 8);
-
-	if (attackerType == QUEEN || attackerType == ROOK || attackerType == BISHOP) {
-		if (canBlockAttacker(color, attackers)) {
-			return false;
-		}
+	if (canBlockAttacker(color, attackers)) {
+		return false;
 	}
+
 
 	// If none of the above, it's checkmate
 	return true;
+}
+bool Board::scanDraw() {
+	if (moveCount < 5) return false;
+
+	return  currentState == prevStates[moveCount - 2]
+		&& currentState == prevStates[moveCount - 4];
 }
