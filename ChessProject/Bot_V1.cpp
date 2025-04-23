@@ -1,5 +1,5 @@
 #pragma once
-#include "Bot.h"
+#include "Bot_V1.h"
 #include <random>
 #include <chrono>
 
@@ -15,8 +15,11 @@
 #define BLACK 1
 #define NONE 2
 
+const int INIT_MAX = -100000000; // -10^9
+const int INIT_MIN = 100000000;  // 10^9
 
-int Bot::piecePunctuation(int type) {
+
+int Bot_V1::piecePunctuation(int type) {
 	switch (type)
 	{
 	case PAWN:
@@ -62,7 +65,7 @@ int Bot::piecePunctuation(int type) {
 	}
 }
 
-int Bot::EvaluateGame(bool turn) {
+int Bot_V1::EvaluateGame(bool turn) {
 	int score = 0;
 	// Evaluación de material
 	for (int sq = 0; sq < 64; sq++) {
@@ -80,76 +83,80 @@ int Bot::EvaluateGame(bool turn) {
 	return score;
 }
 
-vector<Move> Bot::generateAllMoves( bool color) {
+vector<Move> Bot_V1::generateAllMoves(bool color) {
+	vector<Move> legalMoves;
 
-	vector<Move> legalMoves = board->generateAllMoves(color);
+	legalMoves = board->generateAllMoves(color);
+
 	orderMoves(legalMoves);
 	return legalMoves;
 }
 
-void Bot::orderMoves(vector<Move>& moves) {
-	std::sort(moves.begin(), moves.end(), [this](const Move& a, const Move& b) {
-		/*// Prioridad 1: Movimientos que dan jaque
-		bool aCheck = scanChecksStatic(a);
-		bool bCheck = scanChecksStatic(b);
-		if (aCheck != bCheck) return aCheck > bCheck;*/
 
-		
-		// Prioridad 2: Ganancia de material
-		int aGain = piecePunctuation(board->BitboardGetType(a.targetSquare)) - piecePunctuation(board->BitboardGetType(a.sourceSquare));
-		int bGain = piecePunctuation(board->BitboardGetType(b.targetSquare)) - piecePunctuation(board->BitboardGetType(b.sourceSquare));
-		return aGain > bGain;
-		});
+void Bot_V1::orderMoves(vector<Move>& moves) {
+	for (size_t i = 0; i < moves.size(); ++i) {
+		int maxIdx = i;
+		for (size_t j = i + 1; j < moves.size(); ++j) {
+			int gainCurrent = piecePunctuation(board->BitboardGetType(moves[j].targetSquare));
+			int gainMax = piecePunctuation(board->BitboardGetType(moves[maxIdx].targetSquare));
+			if (gainCurrent > gainMax) maxIdx = j;
+		}
+		std::swap(moves[i], moves[maxIdx]);
+	}
 }
 
-int Bot::minimax( int depth, int* n, int* alpha, int* beta, bool maximizingPlayer, vector <Move>& moves) {
-
-	int bestEval =(maximizingPlayer)? -100000: 100000;
+int Bot_V1::minimax(int depth, int* n, int* alpha, int* beta, bool maximizingPlayer, vector<Move>& moves) {
+	int bestEval = (maximizingPlayer) ? INIT_MAX : INIT_MIN;
 	int alpha1 = *alpha, beta1 = *beta;
-	bool color = (maximizingPlayer)? bot : player;
+	bool color = (maximizingPlayer) ? bot : player;
 
-
-	if (depth == 0 || board->scanCheckMate(color)) {
+	if (depth == 0) {
 		int eval = EvaluateGame(color);
-		if (board->scanCheckMate(!color)) eval += (maximizingPlayer) ? 100000 : -100000;
-		return  eval;
+		if (board->scanCheckMate(!color)) {
+			eval = (maximizingPlayer) ? 1000000 : -1000000;
+		}
+		return eval;
+	}
+	if (board->scanCheckMate(color)) {
+		int eval = (maximizingPlayer) ? -1000000 : +1000000;
+		return eval;
 	}
 
-	for ( auto& move : generateAllMoves(color)) {
-		if (beta1 <= alpha1)  break;
+	vector<Move> legalmoves = generateAllMoves(color);
+	if (legalmoves.empty()) return (maximizingPlayer) ? *alpha : *beta;
+	
+	for (int i = 0; i < legalmoves.size(); ++i) {
+		Move& move = legalmoves[i];
+
 
 		MoveResult result = board->makeMove(move);
-		if (!result.success)continue;
+		if (!result.success) continue;
 
-		//check if result in checkmate
-		if (!board->scanChecks( color)) {
-			int eval = minimax( depth - 1, n, &alpha1, &beta1, !maximizingPlayer, moves);
 
-			// [5] Actualizar alpha/beta con logs
-			if (maximizingPlayer) {
-				bestEval = max(bestEval, eval);
-				alpha1 = max(alpha1, eval);
-			}
-			else {
-				bestEval = min(bestEval, eval);
-				beta1 = min(beta1, eval);
-			}
-			if (*n == depth && eval<10000 && eval > -10000) {
-				auto moveD1 = move;
-				moveD1.score = eval;
-				moves.push_back(moveD1);
-			}
+		int eval = minimax(depth - 1, n, &alpha1, &beta1, !maximizingPlayer, moves);
+		if (depth == *n)legalmoves[i].score = eval;
+		if (maximizingPlayer) {
+			bestEval = std::max(bestEval, eval);
+			alpha1 = std::max(alpha1, eval);
+
 		}
-		//undo
+		else {
+			bestEval = std::min(bestEval, eval);
+			beta1 = std::min(beta1, eval);
+		}
+
 		board->undoMove();
-		if (beta1 <= alpha1)  break;
 
+		if (beta1 <= alpha1) {
+			//if (depth == *n)cout << "\nbroke";
+			break;
+		}
 	}
+	moves = legalmoves;
 	return bestEval;
-
 }
 
-Move Bot::botMove(bool turn) {
+Move Bot_V1::botMove(bool turn) {
 
 	vector <Move> bestmoves;
 	auto start = std::chrono::high_resolution_clock::now();
@@ -157,7 +164,7 @@ Move Bot::botMove(bool turn) {
 
 
 	int alpha = -10000, beta = 10000;
-	int depth = 5;
+	int depth = 4;
 
 	int score = minimax(depth, &depth, &alpha, &beta, (turn == bot) ? true : false, bestmoves);
 
@@ -184,13 +191,21 @@ Move Bot::botMove(bool turn) {
 	}*/
 	//cout<<"\n best score:"<< bestscore;
 	
+	if (bestmoves.empty()) {
+		// Si no hay movimientos, devolver un movimiento nulo o lanzar error
+		cout << "\n no hay ningun movimiento legal detectado";
+		Move defaultMove = { 0, 0, NONE, DEFAULT };
+		return defaultMove;
+	}
 
-
+	//cout << "\n move processed: " << bestmoves.size();
 	random_device rd;
 	mt19937 gen(rd());
 	uniform_int_distribution<size_t> dis(0, bestmoves.size() - 1);
+
 
 	Move bestmove = { bestmoves[dis(gen)] };
 
 	return  bestmove;
 }
+
