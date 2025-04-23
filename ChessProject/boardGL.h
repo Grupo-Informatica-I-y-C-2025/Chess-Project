@@ -3,9 +3,20 @@
 #define __BOARD_GL_H__
 
 #include <string>
-#include <vector>
+#include "freeglut.h"
 #include "Game.h"
 
+#define PAWN 0
+#define KNIGHT 1
+#define BISHOP 2
+#define ROOK 3
+#define QUEEN 4
+#define KING 5
+#define EMPTY_CELL 6
+
+#define OWHITE 0
+#define OBLACK 1
+#define ONONE 2
 
 //enums to eliminate dependency of glut
 enum { MOUSE_LEFT_BUTTON, MOUSE_MIDDLE_BUTTON, MOUSE_RIGHT_BUTTON };
@@ -16,12 +27,13 @@ using namespace std;
 class BoardGL {
 	//Renders
 	void drawCircle(float cx, float cy, float r, int num_segments);
-	void drawPawn(Object::color_t c);
-	void drawRook(Object::color_t c);
-	void drawBishop(Object::color_t c);
-	void drawKnigth(Object::color_t c);
-	void drawQueen(Object::color_t c);
-	void drawKing(Object::color_t c);
+
+	void drawPawn( );
+	void drawRook();
+	void drawBishop();
+	void drawKnigth();
+	void drawQueen();
+	void drawKing();
 
 public:
 	//define board 
@@ -42,11 +54,11 @@ public:
 	void DrawGrid();
 	void DrawCell(int i, int j);
 	void KeyDown(unsigned char key);
-	void SpecialKeyDown(unsigned char key);
+	//void SpecialKeyDown(unsigned char key);
 	void MouseButton(int x, int y, int button, bool down, bool shiftKey, bool ctrlKey);
 	void OnTimer(int value);
 
-
+	Bitboard attackMap=0;
 
 	//info
 	void setSize(int s) { N = s; }
@@ -54,16 +66,13 @@ public:
 
 	//coord
 	void cell2center(int cell_x, int cell_y, float& glx, float& gly) {
-		//cell_x, cell_y are the board cell coordinates (upper left hand corner is (0,0))
-		//glx, gly refer to the center of the cell(cell_x,cell_y) in world coordinates
 		glx = cell_y * width + width / 2.0f;
-		gly = -cell_x * width - width / 2.0f;
+		gly = cell_x * width + width / 2.0f; 
 	}
 
 	void world2cell(double x, double y, int& cell_x, int& cell_y) {
-		//world coordinates to cell
-		cell_x = (int)(abs(y / width));
-		cell_y = (int)(x / width);
+		cell_x = static_cast<int>(y / width); 
+		cell_y = static_cast<int>(x / width);
 	}
 
 protected:
