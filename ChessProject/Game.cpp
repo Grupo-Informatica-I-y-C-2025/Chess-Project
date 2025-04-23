@@ -16,12 +16,19 @@ void Game::activate( int xcell_sel, int ycell_sel)
 		if (board->selected(ycell_sel, xcell_sel))
 		{
 			board->unselectCell(ycell_sel, xcell_sel);
-			src[0] = -1, src[1] = -1, dest[0] = -1, dest[1] = -1;
+			movement.sourceSquare = -1, movement.targetSquare = -1;
 		}
 		else if (board->BitboardGetColor(ycell_sel, xcell_sel) == board->BitboardGetTurn())
 		{
 			unselectAll();
 			board->selectCell(ycell_sel, xcell_sel);
+			//board->printBoard(board->generateMovesFrom(board->coordToPos(ycell_sel, xcell_sel),board->BitboardGetColor(ycell_sel, xcell_sel)));
+			movement.sourceSquare = -1;
+			registerCall(xcell_sel, ycell_sel);
+		}
+		else if (board->BitboardGetColor(ycell_sel, xcell_sel) == !board->BitboardGetTurn() || board->BitboardGetColor(ycell_sel, xcell_sel) == 2) {
+			unselectAll();
+			registerCall(xcell_sel, ycell_sel);
 		}
 	}
 
@@ -30,43 +37,60 @@ void Game::registerCall(int xcell_sel, int ycell_sel) {
 	if ((xcell_sel >= 0 && xcell_sel < N) && (ycell_sel >= 0 && ycell_sel < N)) {
 		if (movement.sourceSquare<0)
 		{
-			src[0] = xcell_sel, src[1] = ycell_sel;
+			movement.sourceSquare = xcell_sel * 8 + ycell_sel;
 		}
 		else {
-			dest[0] = xcell_sel, dest[1] = ycell_sel;
+			movement.targetSquare = xcell_sel * 8 + ycell_sel;
 		}
 	}
 }
 
-void Game::makeMove() {
+void Game::playTurn() {
 
 	bool turn = board->BitboardGetTurn();
 
-	if (!board->scanCheckMate(turn) && turn == bot) {
-		movement = machine.botMove(turn);
-		movement.pieceType = board->BitboardGetType(movement.sourceSquare);
+	if (!game_over && turn == bot && !generated) {
+		movement = machine1.botMove(turn);
+		//cout << "\nmove :" << movement.sourceSquare % 8 << movement.sourceSquare / 8 << " " << movement.targetSquare % 8 << movement.targetSquare / 8;
+		//if (!board->isLegalmove(movement))cout << "\nmove is ilegal";
+		generated = true;
 	}
-
-	else if(!board->scanCheckMate(turn) && turn == player) {
-		movement = { board->coordToPos(src[1], src[0]),board->coordToPos(dest[1], dest[0]), board->BitboardGetType(src[1], src[0]) };
+	if (!game_over && turn == player && !generated) {
+		movement = machine2.botMove(turn);
+		//cout << "\nmove :" << movement.sourceSquare % 8 << movement.sourceSquare / 8 << " " << movement.targetSquare % 8 << movement.targetSquare / 8;
+		generated = true;
 	}
-
 
 	if (movement.sourceSquare >= 0 && movement.targetSquare >= 0) {
-
+		movement.pieceType = board->BitboardGetType(movement.sourceSquare);
 		if (board->isLegalmove(movement)) {
 			board->makeMove(movement);
-
-			if (!board->scanCheckMate(!turn)) {
-
-				if (board->scanChecks(!turn)) cout << "\ncheck";
-
-
-			}
-			else { cout << "\ncheckamte"; game_over = true; }
+			generated = false;
+			scanEndGame(!turn);
+			if (!game_over && board->scanChecks(!turn)) cout << "\ncheck";
 		}
-
 		//reset
-		src[0] = -1; dest[0] = -1; src[1] = -1; dest[1]=-1;
+		
+		movement.sourceSquare = -1, movement.targetSquare = -1;
 	}
 }
+
+
+void Game::scanEndGame(bool color) {
+
+	if (board->scanCheckMate(color)) {
+		cout << "\ncheckmate";
+		game_over = true;
+		return;
+	}
+	if (board->scanDraw()) {
+		cout << "\ndraw";
+		game_over = true;
+		return;
+	}
+	if (board->moveCount == 499) {
+		game_over = true;
+		cout << "\noverride stack memory";
+	}
+}
+
