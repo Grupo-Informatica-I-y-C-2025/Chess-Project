@@ -114,7 +114,7 @@ void Board::setBitboards() {
 
  int Board::BitboardGetColor(int x, int y) const {
 	Bitboard mask = coordToBit(x, y);
-	bool color = 2;
+	int color = 2;
 
 	for (int c = 0; c < 2;c++) {
 		for (int t = 0; t < 6; t++) { // EMPTY_CELL no se almacena
@@ -131,6 +131,18 @@ void Board::setBitboards() {
 	 for (int c = 0; c < 2; c++) {
 		 for (int t = 0; t < 6; t++) { // EMPTY_CELL no se almacena
 			 if (currentState.pieces[c][t] & mask) {
+				 return c;
+			 }
+		 }
+	 }return color;
+ }
+ int Board::BitboardGetColor(int sq,ChessState state) const {
+	 Bitboard mask = 1ULL << sq;
+	 bool color = 2;
+
+	 for (int c = 0; c < 2; c++) {
+		 for (int t = 0; t < 6; t++) { // EMPTY_CELL no se almacena
+			 if (state.pieces[c][t] & mask) {
 				 return c;
 			 }
 		 }
