@@ -5,8 +5,9 @@
 #include <math.h>
 #include <iostream>
 
-
 #define DEG2RAD M_PI/180.0			//not used
+
+
 
 void BoardGL::init() {
 	glEnable(GL_LIGHT0);
@@ -32,8 +33,8 @@ void BoardGL::DrawGrid() {
 		else glLineWidth(1);
 		glBegin(GL_LINES);
 
-		glVertex3f(0, -i * width, 0);
-		glVertex3f(dist1, -i * width, 0);
+		glVertex3f(0, i * width, 0);    
+		glVertex3f(dist1, i * width, 0);
 		glEnd();
 	}
 	float dist2 = N * width;
@@ -42,14 +43,14 @@ void BoardGL::DrawGrid() {
 		else glLineWidth(1);
 		glBegin(GL_LINES);
 
-		glVertex3f(i * width, 0, 0);
-		glVertex3f(i * width, -dist2, 0);
+		glVertex3f(i * width, 0, 0);           
+		glVertex3f(i * width, dist2, 0);
 		glEnd();
 	}
 	
 }
 
-void BoardGL::DrawCell(int i, int j) {
+void BoardGL::DrawCell(int y, int x) {
 	////////////////////
 	// Draws contents of cell	
 	// Note:(0, 0) screen coordinates is the upper left hand corner of the board
@@ -57,105 +58,115 @@ void BoardGL::DrawCell(int i, int j) {
 	// INPUT: (i, j) are cell coordinates, (0,0) is the upper left hand square of the board// 
 
 	float glx, gly;
-	cell2center(i, j, glx, gly);
+	cell2center(y, x, glx, gly);
 
 	//Color gris si la pieza esta seleccionada
-	if (m_board->getTab()[i][j].getColor() == Object::WHITE)
+	if (m_board->BitboardGetColor(x,y) == OWHITE)
 	{
-		if (m_board->getTab()[i][j].selected())GLTools::Color(gltools::GREY);//subraya si seleccionado
+		if (m_board->selected(x,y))GLTools::Color(gltools::GREY);//subraya si seleccionado
 		else GLTools::Color(gltools::WHITE);
 	}
-	if (m_board->getTab()[i][j].getColor() == Object::BLACK)
+	if (m_board->BitboardGetColor(x, y) == OBLACK)
 	{
-		if (m_board->getTab()[i][j].selected())GLTools::Color(gltools::GREY);//subraya si seleccionado
+		if (m_board->selected(x,y))GLTools::Color(gltools::GREY);//subraya si seleccionado
 		else GLTools::Color(gltools::BLACK);
 	}
 
-	switch (m_board->getTab()[i][j].getType()) {
+	switch (m_board->BitboardGetType(x, y)) {
 
-	case Object::PAWN:
+	case PAWN:
 		glDisable(GL_LIGHTING);
 
 		//Dibuja el peón
 
 		glTranslatef(glx, gly, 0);
-		drawPawn(m_board->getTab()[i][j].getColor());
+		drawPawn();
 		glTranslatef(-glx, -gly, 0);
 
 		glEnable(GL_LIGHTING);
 		break;
 
-	case Object::ROOK:
+	case ROOK:
 		glDisable(GL_LIGHTING);
 
 		//Dibuja la torre
 
 		glTranslatef(glx, gly, 0);
-		drawRook(m_board->getTab()[i][j].getColor());
+		drawRook();
 		glTranslatef(-glx, -gly, 0);
 
 		glEnable(GL_LIGHTING);
 		break;
 
-	case Object::BISHOP:
+	case BISHOP:
 		glDisable(GL_LIGHTING);
 
 		//Dibuja el alfil
 
 		glTranslatef(glx, gly, 0);
-		drawBishop(m_board->getTab()[i][j].getColor());
+		drawBishop();
 		glTranslatef(-glx, -gly, 0);
 
 		glEnable(GL_LIGHTING);
 		break;
 
-	case Object::KNIGHT:
+	case KNIGHT:
 		glDisable(GL_LIGHTING);
 
 		//Dibuja el alfil
 
 		glTranslatef(glx, gly, 0);
-		drawKnigth(m_board->getTab()[i][j].getColor());
+		drawKnigth();
 		glTranslatef(-glx, -gly, 0);
 
 		glEnable(GL_LIGHTING);
 		break;
 
-	case Object::QUEEN:
+	case QUEEN:
 		glDisable(GL_LIGHTING);
 
 		//Dibuja el alfil
 
 		glTranslatef(glx, gly, 0);
-		drawQueen(m_board->getTab()[i][j].getColor());
+		drawQueen();
 		glTranslatef(-glx, -gly, 0);
 
 		glEnable(GL_LIGHTING);
 		break;
 
-	case Object::KING:
+	case KING:
 		glDisable(GL_LIGHTING);
 
 		//Dibuja el alfil
 
 		glTranslatef(glx, gly, 0);
-		drawKing(m_board->getTab()[i][j].getColor());
+		drawKing();
 		glTranslatef(-glx, -gly, 0);
 
 		glEnable(GL_LIGHTING);
 		break;
 
-	case Object::EMPTY_CELL:
+	case EMPTY_CELL:break;
 
 	default:
 		;
 	}
+
+	if (attackMap & 1ULL << y * 8 + x) {
+		GLTools::Color(gltools::GREY);
+		glTranslatef(glx, gly, 0);
+		drawCircle(0,0, width / 7.0f, 50);
+		glTranslatef(-glx, -gly, 0);
+
+	}
+
+
 }
 
 void BoardGL::Draw() {
 
 	center_x = M * width / 2;
-	center_y = -N * width / 2;
+	center_y = N * width / 2;
 	center_z = 0;
 
 	//Borrado de la pantalla	
@@ -167,6 +178,23 @@ void BoardGL::Draw() {
 	glLoadIdentity();
 	gluLookAt(center_x, center_y, dist, center_x, center_y, center_z, 0, 1, 0);
 	glEnable(GL_LIGHTING);
+
+
+	if (m_board->currentState.selected) {
+		int source = m_board->portable_ctzll(m_board->currentState.selected);
+		int pieceType = m_board->BitboardGetType(source);
+		Bitboard movesBB  = m_board->generateMovesFrom(source, m_board->currentState.turn);
+		while (movesBB) {
+			int target = m_board->portable_ctzll(movesBB);
+			movesBB &= movesBB - 1;
+			Move move = { source, target, pieceType, DEFAULT };
+
+			if (m_board->isLegalmove(move))attackMap|=1ULL<<target;
+		}
+
+	}
+	else attackMap = 0;
+
 
 
 	//Draws board and grid
@@ -239,7 +267,7 @@ void BoardGL::MouseButton(int x, int y, int button, bool down, bool sKey, bool c
 	if (down) {
 
 		////Regsitrar psoicion previa y final -- parte propia
-		game.registerCall(xcell_sel, ycell_sel);
+		//game.registerCall(xcell_sel, ycell_sel);
 
 		////Iniciar movimiento
 		game.activate(xcell_sel, ycell_sel);
@@ -264,6 +292,6 @@ void BoardGL::KeyDown(unsigned char key) {
 }
 
 void BoardGL::OnTimer(int value) {
-	game.makeMove();
+	if(!game.isgame_over())game.playTurn();
 }
 
