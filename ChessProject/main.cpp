@@ -8,10 +8,12 @@
 #include "boardgl.h"
 #pragma once
 
-
-#define GRID_SIZEY	8	
-#define GRID_SIZEX  8	//NxN grid
-#define KRAMNIK 0
+#define CLASSIC 0
+#define CLASSIC_KRAMNIK 1
+#define DEMI 2
+#define DEMI_KRAMNIK 3
+#define SILVERBULLET 4
+#define SILVERBULLET_KRAMNIK 5
 
 /////////////////////////////////
 //call back declarations: will be called by glut when registered
@@ -23,9 +25,8 @@ void OnTimer(int value);
 
 ////////////////////////////////////////////////
 //global objects which make the world
-Board gameboard(GRID_SIZEY,GRID_SIZEX, KRAMNIK);
-Game game(&gameboard);
-BoardGL scene(&gameboard,game);
+Game game(SILVERBULLET);
+BoardGL scene(game);
 
 
 
