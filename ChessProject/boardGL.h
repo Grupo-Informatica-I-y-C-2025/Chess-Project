@@ -37,10 +37,11 @@ class BoardGL {
 
 public:
 	//define board 
-	BoardGL(Board* pb, Game g) :m_board(pb), game(g) {
+	BoardGL( Game g) : game(g) {
+		board = g.board;
 		width = 0.15;				//width of each cell in the grid
-		N = pb->getSizeY();
-		M = pb->getSizeX();		//Grid NxN
+		N = g.board->getSizeY();
+		M = g.board->getSizeX();		//Grid NxN
 		dist = 2;					//distance of viewpoint from center of the board
 		center_z = 0;
 	}
@@ -79,7 +80,7 @@ protected:
 	float width;
 	int N;
 	int M;//size 
-	Board* m_board;
+	Board* board;
 	Game game;
 
 	//visualization	
