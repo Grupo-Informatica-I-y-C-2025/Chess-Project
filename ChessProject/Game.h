@@ -3,27 +3,33 @@
 #include "Bot_V1.h"
 #include "Bot_V2.h"
 #include "Bot_V3.h"
+#include "Bot_V4.h"
+#include "Bot_SB.h"
+
+class BoardGL;
+
 class Game {
+	friend class BoardGL;
 protected:
-	Move movement;
+	
+	Board m_board;
 	Board* board;
-	Bot_V1 machine1;
-	Bot_V3 machine2;
+	Bot_V2 black_bot;
+	Bot_V3 white_bot;
 	int N;
 	int M;
 
+	Move movement{-1,-1};
 
 public:
 	bool bot = 1;
 	bool player = 0;
 	bool generated = 0;
 
-	Game(Board* pb) :board(pb), machine1(pb,bot), machine2(pb) {
-		N = pb->getSizeY();
-		M = pb->getSizeX();		//Grid NxN
-		movement.sourceSquare = -1;
-		movement.targetSquare = -1;
-
+	Game(int n) :m_board(n), board(& m_board), black_bot(board),white_bot(board) {
+		
+		N = m_board.getSizeY();
+		M = m_board.getSizeX();
 	}
 
 	//reglas de movimiento
@@ -39,8 +45,5 @@ public:
 	
 
 private:
-
-
 	bool game_over = false;
-	bool action = false;
 };
