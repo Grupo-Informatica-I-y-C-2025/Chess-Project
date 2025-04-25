@@ -61,18 +61,18 @@ void BoardGL::DrawCell(int y, int x) {
 	cell2center(y, x, glx, gly);
 
 	//Color gris si la pieza esta seleccionada
-	if (m_board->BitboardGetColor(x,y) == OWHITE)
+	if (board->BitboardGetColor(x,y) == OWHITE)
 	{
-		if (m_board->selected(x,y))GLTools::Color(gltools::GREY);//subraya si seleccionado
+		if (board->selected(x,y))GLTools::Color(gltools::GREY);//subraya si seleccionado
 		else GLTools::Color(gltools::WHITE);
 	}
-	if (m_board->BitboardGetColor(x, y) == OBLACK)
+	if (board->BitboardGetColor(x, y) == OBLACK)
 	{
-		if (m_board->selected(x,y))GLTools::Color(gltools::GREY);//subraya si seleccionado
+		if (board->selected(x,y))GLTools::Color(gltools::GREY);//subraya si seleccionado
 		else GLTools::Color(gltools::BLACK);
 	}
 
-	switch (m_board->BitboardGetType(x, y)) {
+	switch (board->BitboardGetType(x, y)) {
 
 	case PAWN:
 		glDisable(GL_LIGHTING);
@@ -180,16 +180,16 @@ void BoardGL::Draw() {
 	glEnable(GL_LIGHTING);
 
 
-	if (m_board->currentState.selected) {
-		int source = m_board->portable_ctzll(m_board->currentState.selected);
-		int pieceType = m_board->BitboardGetType(source);
-		Bitboard movesBB  = m_board->generateMovesFrom(source, m_board->currentState.turn);
+	if (board->getSelected()) {
+		int source = board->portable_ctzll(board->getSelected());
+		int pieceType = board->BitboardGetType(source);
+		Bitboard movesBB  = board->generateMovesFrom(source, board->BitboardGetTurn());
 		while (movesBB) {
-			int target = m_board->portable_ctzll(movesBB);
+			int target = board->portable_ctzll(movesBB);
 			movesBB &= movesBB - 1;
 			Move move = { source, target, pieceType, DEFAULT };
 
-			if (m_board->isLegalmove(move))attackMap|=1ULL<<target;
+			if (board->isLegalmove(move))attackMap|=1ULL<<target;
 		}
 
 	}
