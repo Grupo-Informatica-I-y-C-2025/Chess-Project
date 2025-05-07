@@ -76,7 +76,7 @@ inline int Bot_V1::piecePunctuation(int type) {
 
 inline int Bot_V1::EvaluateGame(bool turn) {
 	int score = 0;
-	// Evaluación de material
+	// EvaluaciÃ³n de material
 	for (int sq = 0; sq < 64; sq++) {
 		if (board->currentState.occupancy & 1ULL << sq) {
 			int type = board->BitboardGetType(sq);
