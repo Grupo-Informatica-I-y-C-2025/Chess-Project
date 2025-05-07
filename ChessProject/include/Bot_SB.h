@@ -87,7 +87,7 @@ inline int Bot_SB::piecePunctuation(int type) {
 inline int Bot_SB::EvaluateGame(bool turn) {
 	int score = 0;
 
-	// Calcular puntuaci髇 absoluta
+	// Calcular puntuaci贸n absoluta
 	score += materialEvaluation(turn) * 2;
 	score += defenseEvaluation(turn) * 10;
 
@@ -96,7 +96,7 @@ inline int Bot_SB::EvaluateGame(bool turn) {
 
 inline int Bot_SB::materialEvaluation(bool turn) {
 	int score = 0;
-	// Evaluaci髇 de material
+	// Evaluaci贸n de material
 	for (int sq = 0; sq < 64; sq++) {
 		if (board->currentState.occupancy & 1ULL << sq) {
 			int type = board->BitboardGetType(sq);
@@ -112,7 +112,7 @@ inline int Bot_SB::defenseEvaluation(bool turn) {
 	Bitboard pieces = board->getPieces(turn);
 	Bitboard defense = board->getAttackMap(turn);
 	Bitboard threats = board->getAttackMap(!turn);
-	// Evaluaci髇 de material
+	// Evaluaci贸n de material
 	while (pieces) {
 		int sq = board->portable_ctzll(pieces);
 		int type = board->BitboardGetType(sq);
@@ -176,7 +176,7 @@ inline void Bot_SB::orderMoves(vector<Move>& moves) {
 					victimValue = piecePunctuation(board->BitboardGetType(moves[i].targetSquare));
 				}
 				else { // Captura al paso
-					victimValue = 100; // Valor de pe髇
+					victimValue = 100; // Valor de pe贸n
 				}
 				int aggressorValue = piecePunctuation(moves[i].pieceType);
 				score = 10000 + (victimValue - aggressorValue); // MVV-LVA
@@ -186,7 +186,7 @@ inline void Bot_SB::orderMoves(vector<Move>& moves) {
 		scoredMoves.emplace_back(score, i);
 	}
 
-	// Ordenar movimientos por puntuaci髇 descendente
+	// Ordenar movimientos por puntuaci贸n descendente
 	sort(scoredMoves.begin(), scoredMoves.end(), [](const auto& a, const auto& b) {
 		return a.first > b.first;
 		});
