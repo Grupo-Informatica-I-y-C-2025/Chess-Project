@@ -5,7 +5,7 @@
 //date of creation: 9/5/16
 #include "freeglut.h"
 #include <iostream>
-#include "boardgl.h"
+#include "boardGL.h"
 #pragma once
 
 #define CLASSIC 0
