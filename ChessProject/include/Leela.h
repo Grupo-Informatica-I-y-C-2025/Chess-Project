@@ -96,8 +96,8 @@ private:
     Move parseBestMove(const std::string& output) {
         size_t pos = output.find("bestmove ");
         if (pos == std::string::npos) {
-            std::cerr << "No se encontró bestmove en la salida" << std::endl;
-            return Move{ -1, -1 }; // Movimiento inválido
+            std::cerr << "No se encontrÃ³ bestmove en la salida" << std::endl;
+            return Move{ -1, -1 }; // Movimiento invÃ¡lido
         }
 
         std::string moveStr = output.substr(pos + 9, 4); // "e2e4" por ejemplo
