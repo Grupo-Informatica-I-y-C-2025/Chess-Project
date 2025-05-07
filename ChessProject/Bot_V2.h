@@ -92,7 +92,7 @@ inline int Bot_V2::piecePunctuation(int type) {
 inline int Bot_V2::EvaluateGame(bool turn) {
 	int score = 0;
 
-	// Calcular puntuaci髇 absoluta
+	// Calcular puntuaci贸n absoluta
 	score += centerControlEvaluation(turn) * 15;
 	score += mobilityEvaluation(turn) * 5;
 	score -= kingSafetyEvaluation(turn) * 10;
@@ -106,7 +106,7 @@ inline int Bot_V2::EvaluateGame(bool turn) {
 
 inline int Bot_V2::materialEvaluation(bool turn) {
 	int score = 0;
-	// Evaluaci髇 de material
+	// Evaluaci贸n de material
 	for (int sq = 0; sq < 64; sq++) {
 		if (board->currentState.occupancy & 1ULL << sq) {
 			int type = board->BitboardGetType(sq);
@@ -122,7 +122,7 @@ inline int Bot_V2::defenseEvaluation(bool turn) {
 	Bitboard pieces = board->getPieces(turn);
 	Bitboard defense = board->getAttackMap(turn);
 	Bitboard threats = board->getAttackMap(!turn);
-	// Evaluaci髇 de material
+	// Evaluaci贸n de material
 	while (pieces) {
 		int sq = board->portable_ctzll(pieces);
 		int type = board->BitboardGetType(sq);
@@ -288,7 +288,7 @@ inline void Bot_V2::orderMoves(vector<Move>& moves) {
 					victimValue = piecePunctuation(board->BitboardGetType(moves[i].targetSquare));
 				}
 				else { // Captura al paso
-					victimValue = 100; // Valor de pe髇
+					victimValue = 100; // Valor de pe贸n
 				}
 				int aggressorValue = piecePunctuation(moves[i].pieceType);
 				score = 10000 + (victimValue - aggressorValue); // MVV-LVA
@@ -298,7 +298,7 @@ inline void Bot_V2::orderMoves(vector<Move>& moves) {
 		scoredMoves.emplace_back(score, i);
 	}
 
-	// Ordenar movimientos por puntuaci髇 descendente
+	// Ordenar movimientos por puntuaci贸n descendente
 	sort(scoredMoves.begin(), scoredMoves.end(), [](const auto& a, const auto& b) {
 		return a.first > b.first;
 		});
@@ -452,7 +452,7 @@ inline Move Bot_V2::botMove(bool turn) {
 	}
 
 	sortMovesByEvaluation(search.moves, turn);
-	cout << "\nBOT2 Evaluaci髇: " << search.evaluation;
+	cout << "\nBOT2 Evaluaci贸n: " << search.evaluation;
 
 	return  search.moves[0];
 }
