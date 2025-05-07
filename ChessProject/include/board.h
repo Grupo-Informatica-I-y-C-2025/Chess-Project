@@ -135,7 +135,7 @@ class Board {
 	friend class BoardGL;
 
 protected:
-	// Definiciones de máscaras posicionales
+	// Definiciones de mÃ¡scaras posicionales
 	static constexpr Bitboard CENTER_SQUARES = 0x0000001818000000ULL;
 	static constexpr Bitboard KING_ZONE_WHITE = 0x0000000000070707ULL;
 	static constexpr Bitboard KING_ZONE_BLACK = 0x0707000000000000ULL;
@@ -163,15 +163,15 @@ protected:
 		0xFF00000000000000ULL  // Fila 8 (rank 7)
 	};
 
-	// Tablas mágicas para torres (precalculadas)
+	// Tablas mÃ¡gicas para torres (precalculadas)
 	Bitboard rookMagics[64];
 	Bitboard* rookAttacks[64];  // Puntero a tabla de ataques por casilla
-	int rookIndexBits[64];      // Bits de índice para cada casilla
+	int rookIndexBits[64];      // Bits de Ã­ndice para cada casilla
 
-	// Tablas mágicas para alfiles (precalculadas)
+	// Tablas mÃ¡gicas para alfiles (precalculadas)
 	Bitboard bishopMagics[64];
 	Bitboard* bishopAttacks[64];// Puntero a tabla de ataques por casilla
-	int bishopIndexBits[64];	// Bits de índice para cada casilla
+	int bishopIndexBits[64];	// Bits de Ã­ndice para cada casilla
 
 
 	Bitboard pawnAttacks[2][64];
@@ -350,7 +350,7 @@ public:
 		// Aislar el bit menos significativo
 		uint64_t isolated = b & (~b + 1);
 
-		// Calcular la posición del bit usando logaritmo base 2
+		// Calcular la posiciÃ³n del bit usando logaritmo base 2
 		return static_cast<int>(log2(isolated));
 	}
 	//MSB
@@ -371,14 +371,14 @@ public:
 		return (x >= 2 && x <= 5 && y >= 2 && y <= 5); // Casillas centrales
 	}
 	
-	// Función auxiliar de desplazamiento seguro
+	// FunciÃ³n auxiliar de desplazamiento seguro
 	Bitboard shift(Bitboard b, int dir)const{
 		if (dir > 0) return b << dir;   // Desplazamiento hacia arriba (blancas)
 		else return b >> (-dir);        // Desplazamiento hacia abajo (negras)
 	}
 
 	int countBits(Bitboard b) {
-		// Método SWAR (5 operaciones para 64 bits)
+		// MÃ©todo SWAR (5 operaciones para 64 bits)
 		b = b - ((b >> 1) & 0x5555555555555555);
 		b = (b & 0x3333333333333333) + ((b >> 2) & 0x3333333333333333);
 		return ((b + (b >> 4)) & 0x0F0F0F0F0F0F0F0F) * 0x0101010101010101 >> 56;
