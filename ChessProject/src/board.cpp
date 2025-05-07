@@ -265,7 +265,7 @@ MoveResult Board::makeMove( Move& move) {
 			return result;
 		}
 	}
-	// 1. Obtener m·scaras de bits
+	// 1. Obtener m√°scaras de bits
 	Bitboard source = 1ULL << move.sourceSquare;
 	Bitboard target = 1ULL << move.targetSquare;
 	bool color = currentState.turn ? BLACK : WHITE;
@@ -326,8 +326,8 @@ MoveResult Board::makeMove( Move& move) {
 		}
 	}
 	else if (move.moveType == PROMOTION) {
-		currentState.pieces[color][PAWN] ^= target;     // Eliminar peÛn
-		currentState.pieces[color][move.promotionPiece] ^= target;    // AÒadir reina
+		currentState.pieces[color][PAWN] ^= target;     // Eliminar pe√≥n
+		currentState.pieces[color][move.promotionPiece] ^= target;    // A√±adir reina
 	}
 	// Captura normal
 	if (targetType != 6 && targetColor !=2) {
@@ -428,7 +428,7 @@ void Board::initAttackTables() {
 			}
 		}
 	}
-	/*// Precalcular m·scaras de alfil (direcciones diagonales)
+	/*// Precalcular m√°scaras de alfil (direcciones diagonales)
 	for (int sq = 0; sq < 64; ++sq) {
 		bishopMasks[sq] = 0;
 		int x = sq % 8;
@@ -448,7 +448,7 @@ void Board::initAttackTables() {
 		}
 	}
 
-	// Precalcular m·scaras de torre (filas y columnas)
+	// Precalcular m√°scaras de torre (filas y columnas)
 	for (int sq = 0; sq < 64; ++sq) {
 		rookMasks[sq] = 0;
 		int x = sq % 8;
@@ -475,7 +475,7 @@ void Board::initAttackTables() {
 }
 
 void Board::initPositionalMasks() {
-	// Precalcular m·scaras para peones pasados
+	// Precalcular m√°scaras para peones pasados
 	for (int color = WHITE; color <= BLACK; ++color) {
 		for (int sq = 0; sq < 64; ++sq) {
 			int file = sq % 8;
@@ -528,7 +528,7 @@ Bitboard Board::generatePawnMoves(int sq, bool color) const {
 			moves |= doublePush;
 		}
 	}
-	// Capturas usando m·scaras precalculadas
+	// Capturas usando m√°scaras precalculadas
 	moves |= pawnAttacks[color][sq] & enemies;
 
 	return moves;
@@ -801,7 +801,7 @@ Bitboard Board::getPath(int kingSquare, int attackerSquare, int attackerType) {
 	int dx = abs((kingSquare % 8) - (attackerSquare % 8));
 	int dy = abs((kingSquare / 8) - (attackerSquare / 8));
 
-	// Verificar alineaciÛn seg˙n el tipo de pieza
+	// Verificar alineaci√≥n seg√∫n el tipo de pieza
 	if (attackerType == BISHOP && dx != dy) return 0;
 	if (attackerType == ROOK && dx != 0 && dy != 0) return 0;
 	if (attackerType == QUEEN && (dx != dy && dx != 0 && dy != 0)) return 0;
@@ -821,20 +821,20 @@ Bitboard Board::getPath(int kingSquare, int attackerSquare, int attackerType) {
 	}
 	return path;
 }
-//aÒadir en passant
+//a√±adir en passant
 bool Board::checkRays(int source, int target, int King, bool color) {
 	Bitboard newOccupancy = currentState.occupancy;
 	newOccupancy &= ~(1ULL << source);  // Eliminar la pieza de origen
 
-	// Si la pieza que se mueve es el rey, actualizar su posiciÛn
+	// Si la pieza que se mueve es el rey, actualizar su posici√≥n
 	bool isKingMove = (source == King);
 	if (isKingMove) {
-		newOccupancy &= ~(1ULL << source); // Eliminar posiciÛn original del rey
-		newOccupancy |= (1ULL << target);   // AÒadir nueva posiciÛn
-		King = target; // Actualizar la posiciÛn del rey para el c·lculo
+		newOccupancy &= ~(1ULL << source); // Eliminar posici√≥n original del rey
+		newOccupancy |= (1ULL << target);   // A√±adir nueva posici√≥n
+		King = target; // Actualizar la posici√≥n del rey para el c√°lculo
 	}
 	else {
-		newOccupancy |= (1ULL << target);   // AÒadir pieza al destino
+		newOccupancy |= (1ULL << target);   // A√±adir pieza al destino
 	}
 
 	// Verificar ataques de piezas alineadas (BISHOP, ROOK, QUEEN)
@@ -847,9 +847,9 @@ bool Board::checkRays(int source, int target, int King, bool color) {
 			if (attackerSq == target) continue; // La pieza movida puede ser capturada
 
 			Bitboard path = getPath(King, attackerSq, piece);
-			if (!path) continue; // No est· alineado
+			if (!path) continue; // No est√° alineado
 
-			// Verificar si el camino est· bloqueado en el nuevo tablero
+			// Verificar si el camino est√° bloqueado en el nuevo tablero
 			if ((path & newOccupancy) == 0) {
 				return false; // Camino despejado: jaque no bloqueado
 			}
