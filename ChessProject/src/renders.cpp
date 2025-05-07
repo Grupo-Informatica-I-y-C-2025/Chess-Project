@@ -43,29 +43,7 @@ Model model_bishop_w, model_bishop_b;
 Model model_queen_w, model_queen_b;
 Model model_king_w, model_king_b;
 
-GLuint loadTexture(const std::string& path) {
-	int width, height, nrChannels;
-	unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
-	if (!data) {
-		std::cerr << "Error al cargar textura: " << path << std::endl;
-		return 0;
-	}
 
-	GLuint textureID;
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_2D, textureID);
-
-	GLenum format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
-	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	stbi_image_free(data);
-	return textureID;
-}
 Model loadOBJ(const std::string& path) {
 	Model model;
 	std::vector<float> temp_vertices, temp_normals, temp_texcoords;
