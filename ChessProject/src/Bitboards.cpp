@@ -119,7 +119,7 @@ Bitboard Board::squareToBitboard(int sq) const {
 	return 1ULL << sq;
 }
 void Board::bitToCoord(Bitboard b, int& x, int& y) const {
-	int pos = portable_ctzll(b); // Posición del bit activo
+	int pos = portable_ctzll(b); // PosiciÃ³n del bit activo
 	x = pos % 8;
 	y = pos / 8;
 }
@@ -227,7 +227,7 @@ void Board::BitboardSetPiece(int x, int y, int pieceType, bool color) {
 	// Limpiar cualquier pieza existente
 	removePiece(x, y);
 
-	// Actualizar bitboards específicos
+	// Actualizar bitboards especÃ­ficos
 	currentState.pieces[color][pieceType] |= mask;
 	currentState.occupancy |= mask;
 }
@@ -243,7 +243,7 @@ Bitboard Board::attackersTo(int target, bool color) const {
 			int sq = portable_ctzll(pieces);
 			Bitboard attacks = generateAttacksFrom(sq, color);
 			if (attacks & targetBB) {
-				attackers |= (1ULL << sq); // Añadir la casilla al bitboard de atacantes
+				attackers |= (1ULL << sq); // AÃ±adir la casilla al bitboard de atacantes
 			}
 			pieces &= pieces - 1; // Eliminar el bit procesado
 		}
@@ -257,7 +257,7 @@ void Board::BitboardSetFlag(int x, int y) {
 	// Limpiar cualquier flag
 	removeFlag(x, y);
 
-	// Actualizar bitboards específicos
+	// Actualizar bitboards especÃ­ficos
 	currentState.enPassant |= mask;
 
 }
@@ -276,7 +276,7 @@ void Board::selectCell(int x, int y) {
 	// Limpiar cualquier flag
 	unselectCell(x, y);
 
-	// Actualizar bitboards específicos
+	// Actualizar bitboards especÃ­ficos
 	currentState.selected |= mask;
 
 }
@@ -312,7 +312,7 @@ void Board::cleanEnpassant() {
 string Board::encodeState(ChessState chess_state) const {
 	string state;
 
-	// Codificar las piezas en notación FEN
+	// Codificar las piezas en notaciÃ³n FEN
 	for (int y = N - 1; y >= 0; --y) {
 		int emptyCount = 0;
 		for (int x = 0; x < M; ++x) {
@@ -510,16 +510,16 @@ bool Board::loadGame(const std::string& filename) {
 
 	// Limpiar estados previos
 	moveCount = 0;
-	currentState = ChessState{}; // Estado inicial vacío
+	currentState = ChessState{}; // Estado inicial vacÃ­o
 
 	std::string encodedState;
 	int count = 0;
 	while (std::getline(file, encodedState) && count < 500) {
-		if (encodedState.empty()) continue; // Ignorar líneas vacías
+		if (encodedState.empty()) continue; // Ignorar lÃ­neas vacÃ­as
 
 		// Decodificar al estado actual temporalmente
 		if (!decodeState(encodedState)) {
-			std::cerr << "Error decodificando línea " << count << "\n";
+			std::cerr << "Error decodificando lÃ­nea " << count << "\n";
 			return false;
 		}
 
@@ -529,14 +529,14 @@ bool Board::loadGame(const std::string& filename) {
 		count++;
 	}
 
-	// Restaurar el último estado válido
+	// Restaurar el Ãºltimo estado vÃ¡lido
 	if (count > 0) {
 		moveCount = count;
 		currentState = prevStates[count - 1];
 		updateAttackMap(); // Actualizar ataques
 	}
 	else {
-		std::cerr << "Archivo vacío o inválido\n";
+		std::cerr << "Archivo vacÃ­o o invÃ¡lido\n";
 		return false;
 	}
 
