@@ -14,7 +14,7 @@ private:
 	uint64_t zobristCastling[4];
 	uint64_t zobristEnPassant[8];
 
-	// Caché de transposición
+	// CachÃ© de transposiciÃ³n
 	struct TTEntry {
 		int depth;
 		int evaluation;
