@@ -5,6 +5,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <stringapiset.h> // WideCharToMultiByte
+#include <direct.h>
 #else
 #include <dirent.h>
 #endif
