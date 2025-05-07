@@ -20,7 +20,7 @@ static const int PAWN_POSITION[2][64] = {
 	  5, -5,-10,  0,  0,-10, -5,  5,
 	  5, 10, 10,-20,-20, 10, 10,  5,
 	  0,  0,  0,  0,  0,  0,  0,  0 },
-	  // Black (sim閠rico)
+	  // Black (sim茅trico)
 	{  0,  0,  0,  0,  0,  0,  0,  0,
 	 5, 10, 10,-20,-20, 10, 10,  5,
 	 5, -5,-10,  0,  0,-10, -5,  5,
@@ -178,7 +178,7 @@ int Bot_V3::piecePunctuation(int type) {
 int Bot_V3::EvaluateGame(bool turn) {
 	int score = 0;
 	
-	// Calcular puntuaci髇 absoluta
+	// Calcular puntuaci贸n absoluta
 	score += centerControlEvaluation(turn) * 30;
 	//score += mobilityEvaluation(turn) * 15;
 	score -= kingSafetyEvaluation(turn) * 10;
@@ -194,7 +194,7 @@ int Bot_V3::materialEvaluation(bool turn) {
 	int score = 0;
 	Bitboard defense = board->getAttackMap(turn);
 	Bitboard threats = board->getAttackMap(!turn);
-	// Evaluaci髇 de material
+	// Evaluaci贸n de material
 	for (int sq = 0; sq < 64; sq++) {
 		if (board->currentState.occupancy & 1ULL << sq) {
 			int type = board->BitboardGetType(sq);
@@ -315,7 +315,7 @@ int Bot_V3::mobilityEvaluation(bool color) {
 }
 
 //----------------------------------------------------------------
-// 3. Seguridad del Rey (An醠isis de ataques y estructura de peones)
+// 3. Seguridad del Rey (An谩lisis de ataques y estructura de peones)
 //----------------------------------------------------------------
 int Bot_V3::kingSafetyEvaluation(bool color) {
 	int kingSq = board->portable_ctzll(board->currentState.pieces[color][KING]);
@@ -382,7 +382,7 @@ int Bot_V3::pawnStructureEvaluation(bool color) {
 }
 
 //----------------------------------------------------------------
-// 5. Coordinaci髇 de Piezas (Ataques en mismas 醨eas)
+// 5. Coordinaci贸n de Piezas (Ataques en mismas 谩reas)
 //----------------------------------------------------------------
 int Bot_V3::pieceCoordinationEvaluation(bool color) {
 	int coordination = 0;
@@ -466,7 +466,7 @@ void Bot_V3::orderMoves(vector<Move>& moves) {
 					victimValue = piecePunctuation(board->BitboardGetType(moves[i].targetSquare));
 				}
 				else { // Captura al paso
-					victimValue = 100; // Valor de pe髇
+					victimValue = 100; // Valor de pe贸n
 				}
 				int aggressorValue = piecePunctuation(moves[i].pieceType);
 				score = 10000 + (victimValue - aggressorValue); // MVV-LVA
@@ -476,7 +476,7 @@ void Bot_V3::orderMoves(vector<Move>& moves) {
 		scoredMoves.emplace_back(score, i);
 	}
 
-	// Ordenar movimientos por puntuaci髇 descendente
+	// Ordenar movimientos por puntuaci贸n descendente
 	sort(scoredMoves.begin(), scoredMoves.end(), [](const auto& a, const auto& b) {
 		return a.first > b.first;
 		});
