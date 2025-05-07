@@ -159,11 +159,11 @@ void Game::loadSavedGame() {
 	}
 
 	int choice;
-	std::cout << "Ingresa el número de la partida a cargar: ";
+	std::cout << "Ingresa el nÃºmero de la partida a cargar: ";
 	std::cin >> choice;
 
 	if (std::find(saves.begin(), saves.end(), choice) == saves.end()) {
-		std::cerr << "Número inválido.\n";
+		std::cerr << "NÃºmero invÃ¡lido.\n";
 		return;
 	}
 
@@ -191,19 +191,19 @@ std::vector<int> Game::listSavedGames() const {
 
 		// Filtrar archivos que coincidan con "partidaX.chess"
 		if (filename.find("partida") == 0 && filename.size() > 13 && filename.substr(filename.size() - 6) == ".chess") {
-			// Extraer el número X del nombre
+			// Extraer el nÃºmero X del nombre
 			std::string numStr = filename.substr(7, filename.size() - 13); // "partida" (7) y ".chess" (6)
 			try {
 				int num = std::stoi(numStr);
 				saves.push_back(num);
 			}
 			catch (...) {
-				continue; // Ignorar números inválidos
+				continue; // Ignorar nÃºmeros invÃ¡lidos
 			}
 		}
 	}
 
-	// Ordenar los números
+	// Ordenar los nÃºmeros
 	std::sort(saves.begin(), saves.end());
 	return saves;
 }
@@ -242,7 +242,7 @@ void Game::loadFENPositions(const std::string& filename) {
 
 void Game::runSimulation(int numGames) {
 	for (int i = 0; i < numGames && i < fenPositions.size(); ++i) {
-		// Cargar posición FEN
+		// Cargar posiciÃ³n FEN
 		if (!board->decodeState(fenPositions[i])) {
 			std::cerr << "Error cargando FEN: " << fenPositions[i] << std::endl;
 			continue;
@@ -259,7 +259,7 @@ void Game::runSimulation(int numGames) {
 			MoveResult result = board->makeMove(move);
 
 			if (!result.success) {
-				std::cerr << "Movimiento inválido en partida " << i << std::endl;
+				std::cerr << "Movimiento invÃ¡lido en partida " << i << std::endl;
 				break;
 			}
 
@@ -278,9 +278,9 @@ void Game::runSimulation(int numGames) {
 }
 
 void Game::printStats() const {
-	std::cout << "Resultados después de " << totalGames << " partidas:\n";
+	std::cout << "Resultados despuÃ©s de " << totalGames << " partidas:\n";
 	std::cout << "- Bot1 (Blanco) victorias: " << whiteWins << "\n";
 	std::cout << "- Bot2 (Negro) victorias: " << blackWins << "\n";
 	std::cout << "- Empates: " << draws << "\n";
-	std::cout << "Puntuación Bot1: " << (whiteWins * 100 / totalGames) << "%\n";
+	std::cout << "PuntuaciÃ³n Bot1: " << (whiteWins * 100 / totalGames) << "%\n";
 }
