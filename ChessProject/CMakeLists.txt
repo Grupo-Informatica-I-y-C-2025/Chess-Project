@@ -21,11 +21,6 @@ set(SOURCES
     src/renders.cpp
 )
 
-# Copy models directory to build folder
-file(COPY ${PROJECT_SOURCE_DIR}/models DESTINATION ${CMAKE_BINARY_DIR})
-
-# Create the executable target
-add_executable(MyChessProject ${SOURCES})
 
 # Specify include directories for the target after it's created
 target_include_directories(MyChessProject PRIVATE ${PROJECT_SOURCE_DIR}/include)
