@@ -1,25 +1,22 @@
 
-#ifndef __BOARD_H__
-#define __BOARD_H__
-
 #pragma once
 #include <iostream>
 #include <vector>
 #include <string>
 #include <sstream>
+#include <cstring>
 
 #include <bitset>
 #include <climits>
 
 #include <random>
 
-#include <unordered_set>
-#include <unordered_map>
 #include <omp.h>
 
 #include <fstream>
 #include <algorithm>
 #include "fileUtils.h"
+
 
 #define WHITE_KINGSIDE  0x1
 #define WHITE_QUEENSIDE 0x2
@@ -72,9 +69,11 @@ struct ChessState {
 	Bitboard enPassant =  0 ;
 	Bitboard castlingRights = 0;
 	Bitboard occupancy = 0;
-	Bitboard currentAttacks[2];
 	Bitboard selected = 0;
 	bool turn;
+	
+	int8_t pieceType[64];
+	int8_t pieceColor[64];
 
 	bool operator==(ChessState const& o) const {
 		if (turn != o.turn)            return false;
@@ -104,44 +103,23 @@ struct Move {
 	int promotionPiece = QUEEN;
 	int score;
 	bool ischeck=false;
+
 };
 struct MoveResult {
 	bool success = false;
 
+	int targetSquare;
 	// Para revertir pieza capturada
-	int capturedPiece = NONE;
-	int capturedColor = -1;
-
-	// Para revertir el hash (estado previo)
-	uint64_t oldEnPassant = 0;
-	int oldCastlingRights = 0;
+	int capturedPiece = EMPTY_CELL;
+	int capturedColor = NONE;
 };
 
-class Game;
-class Bot_V1;
-class Bot_V2;
-class Bot_V3;
-class Bot_V4;
-class Bot_SB;
-class BoardGL;
+// Definiciones de m�scaras posicionales
+static constexpr Bitboard CENTER_SQUARES = 0x0000001818000000ULL;
+static constexpr Bitboard KING_ZONE_WHITE = 0x0000000000070707ULL;
+static constexpr Bitboard KING_ZONE_BLACK = 0x0707000000000000ULL;
 
-class Board {
-	friend class Game;
-	friend class Bot_V1;
-	friend class Bot_V2;
-	friend class Bot_V3;
-	friend class Bot_V4;
-	friend class Bot_SB;
-	friend class BoardGL;
-
-protected:
-	// Definiciones de máscaras posicionales
-	static constexpr Bitboard CENTER_SQUARES = 0x0000001818000000ULL;
-	static constexpr Bitboard KING_ZONE_WHITE = 0x0000000000070707ULL;
-	static constexpr Bitboard KING_ZONE_BLACK = 0x0707000000000000ULL;
-	Bitboard PASSED_PAWN_MASKS[2][64];
-
-	static constexpr Bitboard FILE_MASKS[8] = {
+static constexpr Bitboard FILE_MASKS[8] = {
 	0x0101010101010101ULL, // Columna a (file 0)
 	0x0202020202020202ULL, // Columna b (file 1)
 	0x0404040404040404ULL, // Columna c (file 2)
@@ -163,15 +141,73 @@ protected:
 		0xFF00000000000000ULL  // Fila 8 (rank 7)
 	};
 
-	// Tablas mágicas para torres (precalculadas)
+
+class Game;
+class Evaluation;
+class Generator;
+class Bot_V4;
+class BoardGL;
+
+
+//LSB
+inline int portable_ctzll(uint64_t b) {
+	if (b == 0) return 64;
+
+	// Aislar el bit menos significativo
+	uint64_t isolated = b & (~b + 1);
+
+	// Calcular la posici�n del bit usando logaritmo base 2
+	return static_cast<int>(log2(isolated));
+}
+
+inline bool isCentralSquare(int sq) {
+	int x = sq % 8, y = sq / 8;
+	return (x >= 2 && x <= 5 && y >= 2 && y <= 5); // Casillas centrales
+}
+
+
+inline Bitboard shift(Bitboard b, int dir){
+	if (dir > 0) return b << dir;   // Desplazamiento hacia arriba (blancas)
+	else return b >> (-dir);        // Desplazamiento hacia abajo (negras)
+}
+
+inline int countBits(Bitboard b) {
+	// M�todo SWAR (5 operaciones para 64 bits)
+	b = b - ((b >> 1) & 0x5555555555555555);
+	b = (b & 0x3333333333333333) + ((b >> 2) & 0x3333333333333333);
+	return ((b + (b >> 4)) & 0x0F0F0F0F0F0F0F0F) * 0x0101010101010101 >> 56;
+}
+
+inline int portable_clzll(uint64_t x) {
+	if (x == 0) return 64;
+	int n = 0;
+	if ((x & 0xFFFFFFFF00000000ULL) == 0) { n += 32; x <<= 32; }
+	if ((x & 0xFFFF000000000000ULL) == 0) { n += 16; x <<= 16; }
+	if ((x & 0xFF00000000000000ULL) == 0) { n += 8;  x <<= 8; }
+	if ((x & 0xF000000000000000ULL) == 0) { n += 4;  x <<= 4; }
+	if ((x & 0xC000000000000000ULL) == 0) { n += 2;  x <<= 2; }
+	if ((x & 0x8000000000000000ULL) == 0) { n += 1;  x <<= 1; }
+	return n;
+}
+
+class Board {
+	friend class Game;
+	friend class Evaluation;
+	friend class Generator;
+	friend class Bot_V4;
+	friend class BoardGL;
+
+protected:
+	//estructuras de datos asociadas al cacheado
+	Bitboard PASSED_PAWN_MASKS[2][64];
+
 	Bitboard rookMagics[64];
 	Bitboard* rookAttacks[64];  // Puntero a tabla de ataques por casilla
-	int rookIndexBits[64];      // Bits de índice para cada casilla
+	int rookIndexBits[64];      // Bits de �ndice para cada casilla
 
-	// Tablas mágicas para alfiles (precalculadas)
 	Bitboard bishopMagics[64];
 	Bitboard* bishopAttacks[64];// Puntero a tabla de ataques por casilla
-	int bishopIndexBits[64];	// Bits de índice para cada casilla
+	int bishopIndexBits[64];	// Bits de �ndice para cada casilla
 
 
 	Bitboard pawnAttacks[2][64];
@@ -180,47 +216,49 @@ protected:
 	Bitboard bishopMasks[64];
 	Bitboard rookMasks[64];
 
-	int N;	int M;
-	const bool Kramnik;
-	int gametype;
-	
+	Bitboard currentAttacks[2];
 
 	ChessState prevStates[500];  // Pila de estados anteriores
 	int moveCount = 0;
 	ChessState currentState;
 
 	Bitboard getAttackMap(bool color)const {
-		return currentState.currentAttacks[color];
-	}
-	void updateAttackMap() {
-		currentState.currentAttacks[0] = calculateAttackMap(0);
-		currentState.currentAttacks[1] = calculateAttackMap(1);
+		return currentAttacks[color];
 	}
 
 	Bitboard boundary;
 	void boundaryMask();
 
+	void initCached();
+	void initBitboards();
+	void setBitboards();	
+
+
+
+
+
+	//datos de inicializacion del tablero
+	int N;	int M;
+	const bool Kramnik;
+	int gametype;
+
 
 
 public:
-	// Constructor principal
+	// Constructores
 	Board(int n) : N(games[n].y), M(games[n].x), Kramnik(games[n].kramnik) {
 		gametype = n;
-		initBitboards();
 		setBitboards();
 		initAttackTables();
-		updateAttackMap();
 
 	}
-	// Constructor de copia
+	
 	Board(const Board& other) : N(other.N), M(other.M), Kramnik(other.Kramnik) {
 		memcpy(&currentState, &other.currentState, sizeof(ChessState));
 	}
 
-	// Destructor
+	
 	~Board() = default;
-
-	void printBoard(Bitboard piece)const;
 
 private:
 
@@ -233,14 +271,6 @@ private:
 	void initAttackTables();
 	void initPositionalMasks();
 	void initializePassedPawnMasks();
-
-	Bitboard generatePawnMoves(int,bool)const;
-	Bitboard generateRookMoves(int,bool) const;
-	Bitboard generateBishopMoves(int , bool ) const;
-	Bitboard generateKnightMoves(int , bool ) const;
-	Bitboard generateQueenMoves(int , bool ) const;
-	Bitboard generateKingMoves(int,bool ) const;
-	Bitboard generateCastlingMoves(bool ) const;
 
 	Bitboard getRookAttacksSlow(int, Bitboard)const;
 	Bitboard getRookMask(int)const;
@@ -271,35 +301,27 @@ private:
 
 
 	//funciones asociadas a la verificacion de movimientos
-	Bitboard calculateAttackMap(bool color) const;
-	Bitboard generateAttacksFrom(int sq, bool ) const;
-	Bitboard generateMovesFrom(int, bool) const;
-	Bitboard getMovementMap(bool)const;
-
-
-	MoveResult makeMove( Move&);
-	void undoMove();
-	MoveType determineMoveType(const Move& move)const;
 
 	bool scanChecks(bool, Bitboard&)const;
 	bool scanChecks(bool)const;
-	bool scanCheckMate(bool);
-	bool scanRepetition();
-	bool canKingMove(bool);
-	bool canCaptureAttacker(bool, Bitboard);
-	bool canBlockAttacker(bool, Bitboard);
+	bool scanCheckMate(bool)const;
+	bool scanRepetition()const;
+	bool canKingMove(bool)const;
+	bool canCaptureAttacker(bool, Bitboard)const;
+	bool canBlockAttacker(bool, Bitboard)const;
 
-	Bitboard getPath(int, int,int);
-	bool checkRays(int,int,int, bool);
+	Bitboard getPath(int, int,int)const;
+	bool checkRays(int,int,int, bool)const;
 
-	bool isLegalmove(Move&);
 
+	//funciones asociadas a la generacion de m ovimiento
 	vector<Move> generateAllMoves(bool);
 	vector<Move> generateCaptureMoves(bool);
 	vector<Move> generateQuiescientMoves(bool);
 	vector<Move> generateCheckMoves(bool);
 
 public:
+//funciones asociadas a ficheros y codificacion
 	bool saveGame(const string& );
 	bool loadGame(const string& );
 	const ChessState* getState(int count) const;
@@ -307,17 +329,13 @@ public:
 	bool decodeState(const string&);
 
 
-	//bitboard to interface
-	void initBitboards();
-	void initBitboards(ChessState&);
-	void setBitboards();
+	//funciones de operaciones basicas con bits
 
-	int coordToPos(int x, int y) const;
 	Bitboard coordToBit(int x, int y) const;
-	Bitboard squareToBitboard(int) const;
-	void bitToCoord(Bitboard b, int& x, int& y) const;
 	void removePiece(int x, int y);
 	void removeFlag(int x, int y);
+
+	int piecePunctuation(int)const;
 
 	void BitboardSetPiece(int, int, int, bool);
 	int BitboardGetColor(int, int)const;
@@ -330,10 +348,10 @@ public:
 
 	void BitboardSetFlag(int, int);
 	int BitboardGetFlag(int, int);
-	void cleanEnpassant();
 
 	void selectCell(int, int);
 	void unselectCell(int x, int y);
+	void unselectAll();
 	bool selected(int x, int y);
 
 	bool BitboardGetTurn() { return currentState.turn; }
@@ -342,48 +360,8 @@ public:
 	int getSizeY() { return N; }
 	int getSizeX() { return M; }
 	Bitboard getSelected() { return currentState.selected; }
+	void printBoard(Bitboard piece)const;
 
-	//LSB
-	static int portable_ctzll(uint64_t b) {
-		if (b == 0) return 64;
-
-		// Aislar el bit menos significativo
-		uint64_t isolated = b & (~b + 1);
-
-		// Calcular la posición del bit usando logaritmo base 2
-		return static_cast<int>(log2(isolated));
-	}
-	//MSB
-	static int portable_clzll(uint64_t x) {
-		if (x == 0) return 64;
-		int n = 0;
-		if ((x & 0xFFFFFFFF00000000ULL) == 0) { n += 32; x <<= 32; }
-		if ((x & 0xFFFF000000000000ULL) == 0) { n += 16; x <<= 16; }
-		if ((x & 0xFF00000000000000ULL) == 0) { n += 8;  x <<= 8; }
-		if ((x & 0xF000000000000000ULL) == 0) { n += 4;  x <<= 4; }
-		if ((x & 0xC000000000000000ULL) == 0) { n += 2;  x <<= 2; }
-		if ((x & 0x8000000000000000ULL) == 0) { n += 1;  x <<= 1; }
-		return n;
-	}
-
-	bool isCentralSquare(int sq) {
-		int x = sq % 8, y = sq / 8;
-		return (x >= 2 && x <= 5 && y >= 2 && y <= 5); // Casillas centrales
-	}
-	
-	// Función auxiliar de desplazamiento seguro
-	Bitboard shift(Bitboard b, int dir)const{
-		if (dir > 0) return b << dir;   // Desplazamiento hacia arriba (blancas)
-		else return b >> (-dir);        // Desplazamiento hacia abajo (negras)
-	}
-
-	int countBits(Bitboard b) {
-		// Método SWAR (5 operaciones para 64 bits)
-		b = b - ((b >> 1) & 0x5555555555555555);
-		b = (b & 0x3333333333333333) + ((b >> 2) & 0x3333333333333333);
-		return ((b + (b >> 4)) & 0x0F0F0F0F0F0F0F0F) * 0x0101010101010101 >> 56;
-	}
 };
 
 
-#endif

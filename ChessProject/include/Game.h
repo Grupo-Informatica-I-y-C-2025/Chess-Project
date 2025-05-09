@@ -1,12 +1,6 @@
 #pragma once
-
 #include "board.h"
-#include "Bot_V1.h"
-#include "Bot_V2.h"
-#include "Bot_V3.h"
 #include "Bot_V4.h"
-#include "Bot_SB.h"
-#include "Leela.h"
 
 class BoardGL;
 
@@ -14,15 +8,10 @@ class Game {
 	friend class BoardGL;
 protected:
 	
-	Board m_board;
 	Board* board;
 
 	Bot_V4 bot4;
-	Bot_V3 bot3;
-	Bot_V2 bot2;
-	Bot_V1 bot1;
 
-	LC0 leela;
 	int N;
 	int M;
 
@@ -33,10 +22,12 @@ public:
 	bool player = 0;
 	bool generated = 0;
 
-	Game(int n) :m_board(n), board(& m_board), bot3(board), bot2(board),bot4(board), bot1(board,bot){
+	Game(int n) {
 		
-		N = m_board.getSizeY();
-		M = m_board.getSizeX();
+		board = new Board(n);
+
+		N = board->getSizeY();
+		M = board->getSizeX();
 	}
 
 	//reglas de movimiento

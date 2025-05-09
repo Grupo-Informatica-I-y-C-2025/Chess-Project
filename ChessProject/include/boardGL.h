@@ -2,6 +2,7 @@
 #ifndef __BOARD_GL_H__
 #define __BOARD_GL_H__
 
+#pragma once
 #include <string>
 #include "freeglut.h"
 #include "Game.h"
@@ -23,12 +24,15 @@ enum { MOUSE_LEFT_BUTTON, MOUSE_MIDDLE_BUTTON, MOUSE_RIGHT_BUTTON };
 enum { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT };
 
 using namespace std;
-
-
+struct CaptureAnimation {
+    int x, y;
+    float timer;
+};
 
 class BoardGL {
 	
 	void drawCircle(float cx, float cy, float r, int num_segments);
+	std::vector<CaptureAnimation> activeCaptures;
 	
 	
 public:
@@ -79,6 +83,10 @@ protected:
 
 	void countBackUp() {if (countBack > 0)countBack--;}
 	void countBackDown() {if (countBack < board->moveCount) countBack++;}
+	void attackPathActivation();
+
+	void DrawBorder();
+	void DrawRecorder();
 
 	float width;
 	int N;
