@@ -3,11 +3,12 @@
 JUEGO AJEDREZ Y SUS VARIACIONES KRAMNIK
 
 La normativa especifica del trabajo explicita que se debe incluir la posibilidad de comer sus propias piezas (ajedrez KRAMNIK). Ademas cada grupo tiene asignado una u varias variantes de tablero y de normas especificas; nuestro grupo implementará las reglas del ajedres DEMI y del ajedrez SILVERBULLET 4X5 (así como el juego clasico de ajedrez). Desde el equipo hemos decidido incluir estas 3 variantes, con la posibilidad para cada una de implementar la regla KRAMNIK en cada una de ellas. 
+
 El ajedrez DEMI consiste en un tablero 4x8 con la mitad derecha del tablero clasico, 1es decir REY - ALFIL - CABALLO - TORRE y una fila de peones. No se puede enrocar, y la coronacion excluye la reina.
+
 El ajedrez SILVERBULLET 4X5 consiste en un tablero 4x5 con las piezas siguientes: TORRE - REINA - REY - TORRE  y una fila de peones. No se puede enrocar y la coronacion solo permite torre y reina.
 
-
-Se va a crear un ajedrez y sus variaciones Kramnik con distintas modalidades de juego (contra un bot o 1vs1) mediante Cmake, el compilador Visual Studio y el lenguaje de programación C++. 
+//comentar tema jugabilidad bot vs jugador ,jugador vs jugador
 
 # Objetivos del trabajo:
 
@@ -15,6 +16,8 @@ El principal objetivo de este proyecto es entender los principios de la programa
 
 
 # Aspectos tecnicos:
+
+-El programa está completamente escrito en C++, además no se incluye ningun tipo de entorno de desarrollo grafico como unity, el aspecto grafico está desarrollado en OpenGL a través de la librería freeglut.
 
 -Se usará principalmente CMake para la gestión de las dependencias del proyecto.
 
