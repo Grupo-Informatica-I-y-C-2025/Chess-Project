@@ -17,6 +17,7 @@ El principal objetivo de este proyecto es entender los principios de la programa
 # Aspectos tecnicos:
 
 -Se usará principalmente CMake para la gestión de las dependencias del proyecto.
+
 -Hemos decidido no incluir la librería ETSIDI debido al problema de compatibilidad entre sistemas operativos.
 
 # Organización del proyecto:
