@@ -66,7 +66,6 @@ GLuint loadTexture(const std::string& path) {
 	stbi_image_free(data);
 	return textureID;
 }
-
 Model loadOBJ(const std::string& path) {
 	Model model;
 	std::vector<float> temp_vertices, temp_normals, temp_texcoords;
@@ -397,7 +396,7 @@ void BoardGL::DrawCell(int y, int x, int i) {
 		GLTools::Color(gltools::GREY);
 		glDisable(GL_LIGHTING);
 		glPushMatrix();
-		glTranslatef(glx, gly, -0.1f);
+		glTranslatef(glx, gly, -0.01f);
 		drawCircle(0, 0, width / 7.0f, 50);
 		glPopMatrix();
 		glEnable(GL_LIGHTING);

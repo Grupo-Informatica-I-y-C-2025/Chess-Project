@@ -1,7 +1,7 @@
 ﻿#include "freeglut.h"
 #include "gltools.h"
 #include "boardGL.h"
-
+#include "generator.h"
 
 void BoardGL::Draw() {
 
@@ -50,10 +50,9 @@ void BoardGL::Draw() {
 	
 	DrawRecorder();
 	
+
+
 }
-
-
-
 void BoardGL::MouseButton(int x, int y, int button, bool down, bool sKey, bool ctrlKey) {
 	/////////////////////////
 	// sets state of mouse control buttons + special keys
@@ -106,12 +105,10 @@ void BoardGL::MouseButton(int x, int y, int button, bool down, bool sKey, bool c
 
 		////Iniciar movimiento
 		game.activate(xcell_sel, ycell_sel);
+		
 		attackPathActivation();
 	}
 }
-
-
-
 void BoardGL::KeyDown(unsigned char key) {
 	//////////////////
 	// enlarges or reduces grid by one
@@ -131,28 +128,23 @@ void BoardGL::KeyDown(unsigned char key) {
 		game.loadSavedGame();
 	}
 }
-
-
-
 void BoardGL::OnTimer(int value) {
 	if (!game.isgame_over()) {
 		game.playTurn();
 	}
 }
 
-
-
 void BoardGL::attackPathActivation(){
 	if (board->getSelected() && !countBack) {
-		int source = board->portable_ctzll(board->getSelected());
+		int source = portable_ctzll(board->getSelected());
 		int pieceType = board->BitboardGetType(source);
-		Bitboard movesBB  = board->generateMovesFrom(source, board->BitboardGetTurn());
+		Bitboard movesBB  = Generator::generateMovesFrom(source, board->BitboardGetTurn(),*board);
 		while (movesBB) {
-			int target = board->portable_ctzll(movesBB);
+			int target = portable_ctzll(movesBB);
 			movesBB &= movesBB - 1;
 			Move move = { source, target, pieceType, DEFAULT };
 
-			if (board->isLegalmove(move))attackMap|=1ULL<<target;
+			if (Generator::isLegalmove(move,*board))attackMap|=1ULL<<target;
 		}
 
 	}

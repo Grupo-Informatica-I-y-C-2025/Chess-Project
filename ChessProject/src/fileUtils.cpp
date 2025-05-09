@@ -1,11 +1,10 @@
-#include "FileUtils.h"
+#include "fileUtils.h"
 #include <sys/stat.h>  // UNIX
-#include <direct.h>    // Windows (mkdir)
+
 
 #ifdef _WIN32
 #include <windows.h>
 #include <stringapiset.h> // WideCharToMultiByte
-#include <direct.h>
 #else
 #include <dirent.h>
 #endif

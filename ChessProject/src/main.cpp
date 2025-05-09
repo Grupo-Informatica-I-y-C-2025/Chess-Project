@@ -1,12 +1,8 @@
-//game.cpp: entry point for a general outline of baordgame using glut and OpenGL
-//			configures basic glut parameters and defines a scene wrapper for all 
-//			call backs
-//author:pss
-//date of creation: 9/5/16
 #include "freeglut.h"
 #include <iostream>
 #include "boardGL.h"
-#pragma once
+#include "menu.h"
+
 
 #define CLASSIC 0
 #define CLASSIC_KRAMNIK 1
@@ -16,129 +12,111 @@
 #define SILVERBULLET_KRAMNIK 5
 
 /////////////////////////////////
-//call back declarations: will be called by glut when registered
+// Callbacks declarations
 void OnDraw(void);
 void OnKeyboardDown(unsigned char key, int x, int y);
 void OnMouseClick(int button, int state, int x, int y);
-void OnTimer(int value); 
-//void motion(int x, int y);
+void OnTimer(int value);
 
-////////////////////////////////////////////////
-//global objects which make the world
-Game game(CLASSIC);
-BoardGL scene(game);
+/////////////////////////////////
+// Global objects
+Game* game = nullptr;
+BoardGL* scene = nullptr;
+Menu menu;
 
-
-
-///////////////////////////////////////////////
-
+/////////////////////////////////
 int main(int argc, char* argv[]) {
+    // Add menu items
+    menu.AddItem("CLASSIC", CLASSIC);
+    menu.AddItem("CLASSIC_KRAMNIK", CLASSIC_KRAMNIK);
+    menu.AddItem("DEMI", DEMI);
+    menu.AddItem("DEMI_KRAMNIK", DEMI_KRAMNIK);
+    menu.AddItem("SILVERBULLET", SILVERBULLET);
+    menu.AddItem("SILVERBULLET_KRAMNIK", SILVERBULLET_KRAMNIK);
 
-	//GL Initialization stuff
-	glutInit(&argc, argv);
-	glutInitWindowSize(800, 600);
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-	glutCreateWindow("MiJuego");
+    // GL Initialization
+    glutInit(&argc, argv);
+    glutInitWindowSize(800, 600);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    glutCreateWindow("MiJuego");
+
+    // Initialize the game and scene
+    game = new Game(CLASSIC);
+    scene = new BoardGL(*game);
+
+    glutTimerFunc(25, OnTimer, 0);
+    glutDisplayFunc(OnDraw);
+    glutKeyboardFunc(OnKeyboardDown);
+    glutMouseFunc(OnMouseClick);
+
+    initModels();
 
 
 
-	glutTimerFunc(25,OnTimer,0);			 //set timer if required, currently not used
-	glutDisplayFunc(OnDraw);
-	glutKeyboardFunc(OnKeyboardDown);
-	glutMouseFunc(OnMouseClick);
-	//glutMotionFunc(motion);
-	
-	//sets light and perspective
-	scene.init();
 
-	//glut takes control
-	glutMainLoop();
+    // GLUT takes control
+    glutMainLoop();
+    
+    // Free memory when exiting
+    delete game;
+    delete scene;
 
-	return 0;
+    return 0;
 }
 
 void OnDraw(void) {
-	//////////////////////
-	//captures drawing event
-	//gives control to scene
-	scene.Draw();
-	glutSwapBuffers();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if (menu.IsActive()) {
+        menu.Draw();
+    }
+    else {
+        scene->Draw();
+    }
+
+    glutSwapBuffers();
 }
 
 void OnKeyboardDown(unsigned char key, int x_t, int y_t) {
-	//////////////////////
-	//captures keyboard event
-	//gives control to scene
-	scene.KeyDown(key);
-	glutPostRedisplay();
+    if (!menu.IsActive()) {
+        scene->KeyDown(key);
+        glutPostRedisplay();
+    }
 }
 
-void OnMouseClick(int b, int state, int x, int y) {
-	//////////////
-	//captures clicks with mouse with or without special keys (CTRL or SHIFT)
-	//gives control to board scene
-	bool down = (state == GLUT_DOWN);
-	int button;
-	if (b == GLUT_LEFT_BUTTON) {
-		button = MOUSE_LEFT_BUTTON;
-	}
-	if (b == GLUT_RIGHT_BUTTON) {
-		button = MOUSE_RIGHT_BUTTON;
-		cout << "MOUSE_RIGHT_BUTTON" << endl;
-	}
+void OnMouseClick(int button, int state, int x, int y) {
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        if (menu.IsActive()) {
+            menu.HandleMouseClick(x, y);
+            if (!menu.IsActive()) {
+                // Initialize the game with the selected mode
+                int selectedMode = menu.GetSelectedMode();
+                delete game; // Free previous memory
+                delete scene;
 
-	int specialKey = glutGetModifiers();
-	bool ctrlKey = (specialKey & GLUT_ACTIVE_CTRL) ? true : false;
-	bool sKey = specialKey & GLUT_ACTIVE_SHIFT;
+                game = new Game(selectedMode);
+                scene = new BoardGL(*game);
+                scene->init();
+            }
+        }
+        else {
+            // Handle clicks on the board
+            bool down = (state == GLUT_DOWN);
+            int specialKey = glutGetModifiers();
+            bool ctrlKey = (specialKey & GLUT_ACTIVE_CTRL) ? true : false;
+            bool sKey = specialKey & GLUT_ACTIVE_SHIFT;
+            scene->MouseButton(x, y, button, down, sKey, ctrlKey);
+        }
+    }
 
-
-
-	//
-	scene.MouseButton(x, y, b, down, sKey, ctrlKey);
-	
-
-	glutPostRedisplay();
+    glutPostRedisplay();
 }
-
-/*void motion(int x, int y) {
-	GLint viewport[4];
-	GLdouble modelview[16];
-	GLdouble projection[16];
-	GLfloat winX, winY, winZ;
-	GLdouble posX, posY, posZ;
-
-	glGetDoublev(GL_MODELVIEW_MATRIX, modelview);
-	glGetDoublev(GL_PROJECTION_MATRIX, projection);
-	glGetIntegerv(GL_VIEWPORT, viewport);
-
-	winX = (float)x;
-	winY = (float)viewport[3] - (float)y;
-	glReadPixels(x, int(winY), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ);
-	gluUnProject(winX, winY, winZ, modelview, projection, viewport, &posX, &posY, &posZ);
-
-	
-
-	
-	for (int i = 0; i < GRID_SIZE; i++) {
-		for (int j = 0;j < GRID_SIZE; j++) {
-			if (gameboard.getTab()[i][j].draged()) {
-				scene.DrawCell(i, j, posX, posY);
-				
-			}
-		}
-	}
-	
-
-}*/
 
 void OnTimer(int value) {
-	
+    if (!menu.IsActive()) {
+        scene->OnTimer(value);
+    }
 
-	////Activa movimiento
-	
-	scene.OnTimer(value);
-
-	//sets new timer (do not delete)
-	glutTimerFunc(25,OnTimer,0);
-	glutPostRedisplay();
+    glutTimerFunc(25, OnTimer, 0);
+    glutPostRedisplay();
 }

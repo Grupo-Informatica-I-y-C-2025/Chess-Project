@@ -1,14 +1,7 @@
 #include "Game.h"
-
+#include "generator.h"
 
 //mover a boardGL
-void Game::unselectAll() {
-	for (int i = 0; i < M; i++) {
-		for (int j = 0; j < N; j++) {
-			board->unselectCell(i,j);
-		}
-	}
-}
 void Game::activate( int xcell_sel, int ycell_sel)
 {
 	////Activar casillas -- parte propia	
@@ -20,14 +13,14 @@ void Game::activate( int xcell_sel, int ycell_sel)
 		}
 		else if (board->BitboardGetColor(ycell_sel, xcell_sel) == board->BitboardGetTurn())
 		{
-			unselectAll();
+			board->unselectAll();
 			board->selectCell(ycell_sel, xcell_sel);
 			//board->printBoard(board->generateMovesFrom(board->coordToPos(ycell_sel, xcell_sel),board->BitboardGetColor(ycell_sel, xcell_sel)));
 			if(!board->isKramnik())movement.sourceSquare = -1;
 			registerCall(xcell_sel, ycell_sel);
 		}
 		else if (board->BitboardGetColor(ycell_sel, xcell_sel) == !board->BitboardGetTurn() || board->BitboardGetColor(ycell_sel, xcell_sel) == 2) {
-			unselectAll();
+			board->unselectAll();
 			registerCall(xcell_sel, ycell_sel);
 		}
 	}
@@ -47,23 +40,24 @@ void Game::registerCall(int xcell_sel, int ycell_sel) {
 
 bool Game::playTurn() {
 	bool turn = board->BitboardGetTurn();
-	if (!game_over && turn == bot && !generated) {
-		movement = bot3.botMove(turn);
+	/*if (!game_over && turn == bot && !generated) {
+		movement = bot4.botMove(turn);
 		//cout << "\nmove :" << movement.sourceSquare % 8 << movement.sourceSquare / 8 << " " << movement.targetSquare % 8 << movement.targetSquare / 8;
 		generated = true;
-	}
-	if (!game_over && turn == player && !generated) {
-		movement = bot4.botMove(turn);
+	}*/
+	if (!game_over && turn == BLACK && !generated) {
+		movement = bot4.botMove(turn,*board);
 		//cout << "\nmove :" << movement.sourceSquare % 8 << movement.sourceSquare / 8 << " " << movement.targetSquare % 8 << movement.targetSquare / 8;
 		generated = true;
 	}
 
 	if (movement.sourceSquare >= 0 && movement.targetSquare >= 0) {
+		
 		movement.pieceType = board->BitboardGetType(movement.sourceSquare);
-		if (board->isLegalmove(movement)) {
-			board->makeMove(movement);
+		if (Generator::isLegalmove(movement,*board)) {
+			Generator::makeMove(movement,*board);
 			generated = false;
-			leela.recordMoves(movement);
+
 			scanEndGame(!turn);
 			if (!game_over && board->scanChecks(!turn)) cout << "\ncheck";
 
@@ -77,9 +71,8 @@ bool Game::playTurn() {
 	return false;
 }
 
-
 void Game::scanEndGame(bool color) {
-	vector<Move> moves = board->generateAllMoves(color);
+	vector<Move> moves = Generator::generateAllMoves(color,*board);
 	if (moves.size() == 0) {
 		if (board->scanChecks(color)) {
 			cout << "\ncheckmate";
@@ -159,11 +152,11 @@ void Game::loadSavedGame() {
 	}
 
 	int choice;
-	std::cout << "Ingresa el número de la partida a cargar: ";
+	std::cout << "Ingresa el n�mero de la partida a cargar: ";
 	std::cin >> choice;
 
 	if (std::find(saves.begin(), saves.end(), choice) == saves.end()) {
-		std::cerr << "Número inválido.\n";
+		std::cerr << "N�mero inv�lido.\n";
 		return;
 	}
 
@@ -191,19 +184,19 @@ std::vector<int> Game::listSavedGames() const {
 
 		// Filtrar archivos que coincidan con "partidaX.chess"
 		if (filename.find("partida") == 0 && filename.size() > 13 && filename.substr(filename.size() - 6) == ".chess") {
-			// Extraer el número X del nombre
+			// Extraer el n�mero X del nombre
 			std::string numStr = filename.substr(7, filename.size() - 13); // "partida" (7) y ".chess" (6)
 			try {
 				int num = std::stoi(numStr);
 				saves.push_back(num);
 			}
 			catch (...) {
-				continue; // Ignorar números inválidos
+				continue; // Ignorar n�meros inv�lidos
 			}
 		}
 	}
 
-	// Ordenar los números
+	// Ordenar los n�meros
 	std::sort(saves.begin(), saves.end());
 	return saves;
 }
@@ -238,49 +231,4 @@ void Game::loadFENPositions(const std::string& filename) {
 	while (std::getline(file, fen)) {
 		fenPositions.push_back(fen);
 	}
-}
-
-void Game::runSimulation(int numGames) {
-	for (int i = 0; i < numGames && i < fenPositions.size(); ++i) {
-		// Cargar posición FEN
-		if (!board->decodeState(fenPositions[i])) {
-			std::cerr << "Error cargando FEN: " << fenPositions[i] << std::endl;
-			continue;
-		}
-
-		// Simular partida
-		bool gameOver = false;
-		while (!gameOver) {
-			// Obtener turno actual
-			bool currentTurn = board->BitboardGetTurn();
-
-			// Bot realiza movimiento
-			Move move = (currentTurn == WHITE) ? bot4.botMove(currentTurn) : bot1.botMove(currentTurn);
-			MoveResult result = board->makeMove(move);
-
-			if (!result.success) {
-				std::cerr << "Movimiento inválido en partida " << i << std::endl;
-				break;
-			}
-
-			// Verificar fin de partida
-			if (board->scanCheckMate(!currentTurn)) {
-				(currentTurn == WHITE) ? ++whiteWins : ++blackWins;
-				gameOver = true;
-			}
-			else if (board->scanRepetition() || board->generateAllMoves(currentTurn).empty()) {
-				++draws;
-				gameOver = true;
-			}
-		}
-		++totalGames;
-	}
-}
-
-void Game::printStats() const {
-	std::cout << "Resultados después de " << totalGames << " partidas:\n";
-	std::cout << "- Bot1 (Blanco) victorias: " << whiteWins << "\n";
-	std::cout << "- Bot2 (Negro) victorias: " << blackWins << "\n";
-	std::cout << "- Empates: " << draws << "\n";
-	std::cout << "Puntuación Bot1: " << (whiteWins * 100 / totalGames) << "%\n";
 }

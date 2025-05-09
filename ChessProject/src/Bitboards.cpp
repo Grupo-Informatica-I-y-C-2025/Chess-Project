@@ -1,7 +1,6 @@
-#pragma once
+
 #include "board.h"
-
-
+#include "generator.h"
 
 void Board::printBoard(Bitboard board) const {
 	cout << "\n\n";
@@ -15,24 +14,15 @@ void Board::printBoard(Bitboard board) const {
 	}
 }
 int Board::getVariant()const {
-	int variante = 0;
-	if (gametype == 0 || gametype == 1)variante = 0;
-	if (gametype == 2 || gametype == 3)variante = 1;
-	if (gametype == 4 || gametype == 5)variante = 2;
-	return variante;
+	return gametype/2;
 }
 void Board::initBitboards() {
 	memset(&currentState, 0, sizeof(ChessState));  // Todos los bits a 0
-}
-void Board::initBitboards(ChessState& state) {
-	memset(&state, 0, sizeof(ChessState));  // Todos los bits a 0
 }
 void Board::setBitboards() {
 
 	initBitboards();
 	currentState.turn = WHITE; // El blanco comienza
-
-
 
 	switch (getVariant()) {
 	case 0:
@@ -107,21 +97,61 @@ void Board::setBitboards() {
 		break;
 	}
 
+	initCached();
 }
 
-int Board::coordToPos(int x, int y) const {
-	return  (y * 8 + x); // Ej: (2,3) ? 1 << 26
+
+int Board::piecePunctuation(int type) const{
+	switch (type)
+	{
+	case PAWN:
+
+		return 100;
+		break;
+
+	case ROOK:
+
+		return 500;
+		break;
+
+	case BISHOP:
+
+		return 300;
+		break;
+
+	case KNIGHT:
+
+		return 300;
+		break;
+
+	case QUEEN:
+
+		return 900;
+		break;
+
+	case KING:
+
+		return 0;
+		break;
+
+
+	case EMPTY_CELL:
+
+		return 0;
+		break;
+
+	default:
+
+		return 0;
+		break;
+	}
 }
+
+
+
+
 Bitboard Board::coordToBit(int x, int y) const {
 	return 1ULL << (y * 8 + x); // Ej: (2,3) ? 1 << 26
-}
-Bitboard Board::squareToBitboard(int sq) const {
-	return 1ULL << sq;
-}
-void Board::bitToCoord(Bitboard b, int& x, int& y) const {
-	int pos = portable_ctzll(b); // Posición del bit activo
-	x = pos % 8;
-	y = pos / 8;
 }
 void Board::removePiece(int x, int y) {
 	Bitboard mask = coordToBit(x, y);
@@ -137,17 +167,6 @@ void Board::removePiece(int x, int y) {
 		}
 	}
 }
-void Board::removeFlag(int x, int y) {
-	Bitboard mask = coordToBit(x, y);
-
-	// Buscar en todos los tipos y colores
-	if (currentState.enPassant & mask) {
-		currentState.enPassant &= ~mask;
-		currentState.occupancy &= ~mask;
-		return;
-	}
-}
-
 
 int Board::BitboardGetColor(int x, int y) const {
 	Bitboard mask = coordToBit(x, y);
@@ -227,7 +246,7 @@ void Board::BitboardSetPiece(int x, int y, int pieceType, bool color) {
 	// Limpiar cualquier pieza existente
 	removePiece(x, y);
 
-	// Actualizar bitboards específicos
+	// Actualizar bitboards espec�ficos
 	currentState.pieces[color][pieceType] |= mask;
 	currentState.occupancy |= mask;
 }
@@ -241,33 +260,14 @@ Bitboard Board::attackersTo(int target, bool color) const {
 		Bitboard pieces = currentState.pieces[color][pt];
 		while (pieces) {
 			int sq = portable_ctzll(pieces);
-			Bitboard attacks = generateAttacksFrom(sq, color);
+			Bitboard attacks = Generator::generateAttacksFrom(sq, color,*this);
 			if (attacks & targetBB) {
-				attackers |= (1ULL << sq); // Añadir la casilla al bitboard de atacantes
+				attackers |= (1ULL << sq); // A�adir la casilla al bitboard de atacantes
 			}
 			pieces &= pieces - 1; // Eliminar el bit procesado
 		}
 	}
 	return attackers;
-}
-
-void Board::BitboardSetFlag(int x, int y) {
-	Bitboard mask = coordToBit(x, y);
-
-	// Limpiar cualquier flag
-	removeFlag(x, y);
-
-	// Actualizar bitboards específicos
-	currentState.enPassant |= mask;
-
-}
-int Board::BitboardGetFlag(int x, int y) {
-	Bitboard mask = coordToBit(x, y);
-	int flag = 0;
-
-	if (currentState.enPassant & mask) flag = 1;
-
-	return flag;
 }
 
 void Board::selectCell(int x, int y) {
@@ -276,7 +276,7 @@ void Board::selectCell(int x, int y) {
 	// Limpiar cualquier flag
 	unselectCell(x, y);
 
-	// Actualizar bitboards específicos
+	// Actualizar bitboards espec�ficos
 	currentState.selected |= mask;
 
 }
@@ -289,6 +289,9 @@ void Board::unselectCell(int x, int y) {
 
 	}
 }
+void Board::unselectAll() {
+	currentState.selected=0;
+}
 bool Board::selected(int x, int y) {
 	Bitboard mask = coordToBit(x, y);
 
@@ -297,26 +300,14 @@ bool Board::selected(int x, int y) {
 	return s;
 }
 
-void Board::cleanEnpassant() {
-
-	for (int i = 0; i < M; i++) {
-		for (int j = 0; j < N; j++) {
-
-			removeFlag(i, j);
-		}
-	}
-
-
-}
-
 string Board::encodeState(ChessState chess_state) const {
 	string state;
 
-	// Codificar las piezas en notación FEN
+	// Codificar las piezas en notaci�n FEN
 	for (int y = N - 1; y >= 0; --y) {
 		int emptyCount = 0;
 		for (int x = 0; x < M; ++x) {
-			int sq = coordToPos(x, y);
+			int sq = x + y * 8;
 			int color = BitboardGetColor(sq, chess_state);
 			int type = BitboardGetType(sq, chess_state);
 			if (type == EMPTY_CELL) {
@@ -455,7 +446,7 @@ bool Board::decodeState(const string& encoded) {
 	}
 
 	// Actualizar estado
-	updateAttackMap();
+	Generator::updateAttackMap(*this);
 	return true;
 }
 const ChessState* Board::getState(int count) const {
@@ -510,16 +501,16 @@ bool Board::loadGame(const std::string& filename) {
 
 	// Limpiar estados previos
 	moveCount = 0;
-	currentState = ChessState{}; // Estado inicial vacío
+	currentState = ChessState{}; // Estado inicial vac�o
 
 	std::string encodedState;
 	int count = 0;
 	while (std::getline(file, encodedState) && count < 500) {
-		if (encodedState.empty()) continue; // Ignorar líneas vacías
+		if (encodedState.empty()) continue; // Ignorar l�neas vac�as
 
 		// Decodificar al estado actual temporalmente
 		if (!decodeState(encodedState)) {
-			std::cerr << "Error decodificando línea " << count << "\n";
+			std::cerr << "Error decodificando l�nea " << count << "\n";
 			return false;
 		}
 
@@ -529,14 +520,14 @@ bool Board::loadGame(const std::string& filename) {
 		count++;
 	}
 
-	// Restaurar el último estado válido
+	// Restaurar el �ltimo estado v�lido
 	if (count > 0) {
 		moveCount = count;
 		currentState = prevStates[count - 1];
-		updateAttackMap(); // Actualizar ataques
+		Generator::updateAttackMap(*this); // Actualizar ataques
 	}
 	else {
-		std::cerr << "Archivo vacío o inválido\n";
+		std::cerr << "Archivo vac�o o inv�lido\n";
 		return false;
 	}
 

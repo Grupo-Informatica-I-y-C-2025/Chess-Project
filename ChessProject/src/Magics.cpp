@@ -1,11 +1,12 @@
-#pragma once
+
 #include "board.h"
 #include <mutex>
+#include <unordered_set>
+#include <unordered_map>
 
 
 
-
-// Función para calcular calidad del número mágico
+// Funci�n para calcular calidad del n�mero m�gico
 int Board::calculateMagicQuality(int sq, Bitboard magic, Bitboard mask, int bits, bool isBishop) {
 	unordered_map<Bitboard, Bitboard> attack_table;
 	int collisions = 0;
@@ -24,7 +25,7 @@ int Board::calculateMagicQuality(int sq, Bitboard magic, Bitboard mask, int bits
 	}
 	return collisions;
 }
-// Función para guardar los mejores números mágicos
+// Funci�n para guardar los mejores n�meros m�gicos
 void Board::saveBestMagic(int sq, Bitboard magic, int quality, bool isBishop) {
 	ofstream out("magics.log", ios::app);
 	out << (isBishop ? "Bishop" : "Rook")
@@ -44,7 +45,7 @@ static std::mt19937_64 magicRng(std::random_device{}());
 
 std::mutex outputMutex; // Para proteger recursos de salida compartidos
 
-// Función para guardar números mágicos en el archivo si es más pequeño
+// Funci�n para guardar n�meros m�gicos en el archivo si es m�s peque�o
 void saveMagicIfSmaller(int sq, Bitboard magic, bool isBishop) {
 	const std::string filename = isBishop ? "bishop_magics.txt" : "rook_magics.txt";
 
@@ -67,7 +68,7 @@ void saveMagicIfSmaller(int sq, Bitboard magic, bool isBishop) {
 		ss >> std::hex >> magics[i];
 	}
 
-	// Si el nuevo es mejor (más pequeño), actualizamos
+	// Si el nuevo es mejor (m�s peque�o), actualizamos
 	if (magic < magics[sq]) {
 		magics[sq] = magic;
 
@@ -85,7 +86,7 @@ void saveMagicIfSmaller(int sq, Bitboard magic, bool isBishop) {
 }
 
 
-// Función para generar mágicos
+// Funci�n para generar m�gicos
 void Board::generateMagicsForSquares(bool isBishop) {
 	std::cout << (isBishop ? "Bishop" : "Rook") << " Magics:\n";
 	std::vector<std::thread> threads;
@@ -144,11 +145,11 @@ bool Board::validateMagic(int sq, Bitboard magic, Bitboard mask,
 
 
 
-// Convertir índice a patrón de bloqueo
+// Convertir �ndice a patr�n de bloqueo
 Bitboard Board::indexToBitboard(Bitboard index, Bitboard mask) {
 	Bitboard blockers = 0;
 	while (mask) {
-		// Obtener el índice del bit más significativo en mask
+		// Obtener el �ndice del bit m�s significativo en mask
 		int msb = 63 - portable_clzll(mask);
 		if (index & 1) blockers |= (1ULL << msb);
 		index >>= 1;
@@ -218,7 +219,7 @@ void Board::initBishopAttacks(int sq) {
 	}
 }
 void Board::initRookMagics() {
-	// Valores mágicos conocidos (pueden usarse como base)
+	// Valores m�gicos conocidos (pueden usarse como base)
 	static const Bitboard Rmagic[64] = {
 		0x8a80104000800020ULL, 0x140002000100040ULL,
   0x2801880a0017001ULL, 0x100081001000420ULL,
