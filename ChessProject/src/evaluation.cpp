@@ -4,41 +4,44 @@
 
 // Siempre devuelve (scoreBlancas − scoreNegras)
 int Evaluation::EvaluateGame(const Board& board) {
-	int w = evaluateColor(WHITE, board);
-	int b = evaluateColor(BLACK, board);
-	return w - b;
+	bool color = board.currentState.turn;
+	int p = evaluateColor(color, board);
+	int o = evaluateColor(!color, board);
+	return p - o;
 }
 
 // Evalúa todos los términos para un color concreto
-int Evaluation::evaluateColor(bool color,const Board& board) {
-	int score = 0;
-	if (board.scanCheckMate(color) || board.scanRepetition()) {
-		return INIT_MIN;
-	}
-	
-	int material = materialEvaluation(color, board) * 5;
-	int mobility = mobilityEvaluation(color,board) * 5;
-	int activity = pieceActivityEvaluation(color,board) * 10;
-	int structure= pawnStructureEvaluation(color,board) * 15;
-	int control = centerControlEvaluation(color,board) * 30;
-	int safety = -kingSafetyEvaluation(color,board) * 10;
-	score += bishopPairEvaluation(color,board) * 50;
-	score += rookOpenFileEvaluation(color,board) * 20;
-	score -= badBishopEvaluation(color,board) * 15;
-	score += seventhRankEvaluation(color,board) * 20;
-	int position = positionalEvaluation(color,board) / 2;
-	/*if (color == WHITE) {
-		cout << "\ncolor: white ";
-		cout << "\nmaterial: " << material;
-		cout << "\nmobility: " << mobility;
-		cout << "\nactivity: " << activity;
-		cout << "\nstructure: " << structure;
-		cout << "\ncontrol: " << control;
-		cout << "\nsafety: " << safety;
-		cout << "\nposition: " << position;
-	}*/
-	score += material + mobility + activity + structure + control + safety + position;
-	return score;
+int Evaluation::evaluateColor(bool color, const Board& board) {
+    if (board.scanCheckMate(color)) return INIT_MIN; // Penalización más fuerte
+
+    // Pesos ajustados por fase
+    const int phase = gamePhase(board);
+    const int materialWeight = (phase == ENDGAME) ? 4 : 6;
+    const int safetyWeight = (phase == OPENING) ? 8 : 12;
+    const int activityWeight = (phase == MIDGAME) ? 15 : 8;
+
+    // Componentes clave
+    int score = 0;
+    score += materialEvaluation(color, board) * materialWeight;
+    score += mobilityEvaluation(color, board) * 4;
+    score += pieceActivityEvaluation(color, board) * activityWeight;
+    score += pawnStructureEvaluation(color, board) * 20;
+    score += centerControlEvaluation(color, board) * 35;
+    score += kingSafetyEvaluation(color, board) * safetyWeight; // ¡Función modificada!
+    score += positionalEvaluation(color, board); // Sin división
+
+    // Bonus/Penalizaciones estratégicas
+    score += bishopPairEvaluation(color, board) * 60;
+    score += rookOpenFileEvaluation(color, board) * 25;
+    score -= badBishopEvaluation(color, board) * 20;
+    //score += passedPawnEvaluation(color, board) * 30; // Nueva función
+
+    // Ajuste por ventaja de desarrollo en apertura
+   /* if (phase == OPENING) {
+        score += developmentBonus(color, board) * 40;
+    }*/
+
+    return score;
 }
 
 int Evaluation::materialEvaluation(bool turn, const Board& board) {

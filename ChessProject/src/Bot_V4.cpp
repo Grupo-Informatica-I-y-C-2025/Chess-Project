@@ -1,6 +1,7 @@
 ﻿#include "Bot_V4.h"
 #include "generator.h"
 #include "evaluation.h"
+#include "openings.h"
 #include <random>
 #include <chrono>
 
@@ -9,92 +10,102 @@ const int QUIESCE_DEPTH = 3;
 
 static int totalNodes;
 Bot_V4::search_result Bot_V4::SearchMoves(int depth, int alpha, int beta, Board& board) {
-	totalNodes++;
+    totalNodes++;
 
-	if (depth == 0)
-		return SearchQuiescent(alpha,beta,board);
+    // 1. Caso base: búsqueda quiescente
+    if (depth == 0) {
+        return SearchQuiescent(alpha, beta, board);
+    }
 
-	bool maximizing = (board.currentState.turn == WHITE);
+    // 2. Null Move Pruning (solo si no hay jaque)
+    if (depth >= 2 && !board.scanChecks(board.currentState.turn)) {
+        // Guardar estado completo
+        ChessState prevState = board.currentState;
+        
+        // Simular movimiento nulo
+        board.currentState.turn = !board.currentState.turn;
+        Generator::updateAttackMap(board); // Actualizar ataques
 
-	int bestEval = maximizing ? INIT_MIN : INIT_MAX;
-	Move bestMove = { 0,0,NONE,DEFAULT };
+        // Búsqueda reducida (evitar profundidad negativa)
+        int R = 2;
+        int reducedDepth = std::max(0, depth - 1 - R); // ¡Importante!
+        int nullEval = -SearchMoves(reducedDepth, -beta, -beta + 1, board).evaluation;
 
-	auto moves = Generator::generateAllMoves(board.currentState.turn,board);
-	Generator::orderMoves(moves,board);
+        // Restaurar estado completo
+        board.currentState = prevState;
+        Generator::updateAttackMap(board);
 
+        // Poda si es posible
+        if (nullEval >= beta) {
+            return {beta, {}};
+        }
+    }
 
- 	bool pvNode = (beta - alpha) > 1;
+    // 3. Búsqueda estándar Negamax/PVS
+    int bestEval = INIT_MIN;
+    Move bestMove = {0, 0, NONE, DEFAULT};
+    vector<Move> moves = Generator::generateAllMoves(board.currentState.turn, board);
+    Generator::orderMoves(moves, board);
 
-	for (size_t i = 0; i < moves.size(); ++i) {
+    for (Move& move : moves) {
+        MoveResult result = Generator::makeMove(move, board);
+        if (!result.success) continue;
 
-        auto& m = moves[i];
+        search_result sr = SearchMoves(depth - 1, -beta, -alpha, board);
+        int currentEval = -sr.evaluation;
 
-		auto res = Generator::makeMove(m,board);
-		if (!res.success) continue;
+        Generator::undoMove(board);
 
-		 search_result sr;
-        if (pvNode && i == 0) {
-            sr = SearchMoves(depth-1, alpha, beta, board);
-        } else {
-            sr = SearchMoves(depth-1, alpha-20, alpha, board);
-            if (sr.evaluation > alpha)
-                sr = SearchMoves(depth-1, alpha, beta, board);
+        if (currentEval > bestEval) {
+            bestEval = currentEval;
+            bestMove = move;
+            alpha = std::max(alpha, bestEval);
         }
 
-		Generator::undoMove(board);
+        if (alpha >= beta) break; // Corte beta
+    }
 
-		if ((maximizing && sr.evaluation > bestEval) || (!maximizing && sr.evaluation < bestEval)) {
-			bestEval = sr.evaluation;
-			bestMove = m;
-		}
-		if (maximizing) alpha = max(alpha, bestEval);
-		else beta = min(beta, bestEval);
-		if (beta <= alpha) break;
-	}
-
-	return { bestEval, bestMove };
+    return {bestEval, bestMove};
 }
 
-Bot_V4::search_result Bot_V4::SearchQuiescent(int alpha, int beta,Board& board) {
-	totalNodes++;
+Bot_V4::search_result Bot_V4::SearchQuiescent(int alpha, int beta, Board& board) {
+    totalNodes++;
 
-	bool maximizing = (board.currentState.turn == 0);
-	int standPat = Evaluation::EvaluateGame(board);
+    // Evaluación estándar (stand-pat)
+    int standPat = Evaluation::EvaluateGame(board);
+    int bestEval = standPat;
 
-	if (standPat >= beta) return { standPat, Move{0,0,NONE,DEFAULT} };
-	if (standPat > alpha) alpha = standPat;
+    // Corte beta
+    if (standPat >= beta) return {standPat, {}};
 
-	auto moves = Generator::generateQuiescientMoves(board.currentState.turn,board);
+    // Actualizar alpha
+    alpha = std::max(alpha, standPat);
 
-	//posiciones estables sal de busqueda quiesciente
-	if (moves.size() <= 1) 
-        return { standPat, Move{0,0,NONE,DEFAULT} };
+    // Generar movimientos quiescentes (capturas y jaques)
+    vector<Move> moves = Generator::generateQuiescientMoves(board.currentState.turn, board);
+    Generator::orderMoves(moves, board);
 
-	int bestEval = standPat;
-	Move bestMove = Move{ 0,0,NONE,DEFAULT };
+    // Procesar movimientos inestables
+    for (Move& move : moves) {
+        MoveResult result = Generator::makeMove(move, board);
+        if (!result.success) continue;
 
-	for (auto& m : moves) {
-		if (staticExchangeEval(m,board) < -20) continue;
+        // Llamada recursiva con Negamax
+        search_result sr = -SearchQuiescent(-beta, -alpha, board);
 
-		auto res = Generator::makeMove(m,board);
-		if (!res.success) continue;
+        Generator::undoMove(board);
 
-		if (m.targetSquare != res.targetSquare) {
-            Generator::undoMove(board);
-            continue;
+        // Actualizar mejor evaluación
+        if (sr.evaluation > bestEval) {
+            bestEval = sr.evaluation;
+            alpha = std::max(alpha, bestEval);
         }
 
-		auto sr = SearchQuiescent(alpha, beta,board);
+        // Corte alfa-beta
+        if (alpha >= beta) break;
+    }
 
-		Generator::undoMove(board);
-
-		if (maximizing) alpha = std::max(alpha, bestEval);
-		else beta = std::min(beta, bestEval);
-
-		if (beta <= alpha) break;
-	}
-
-	return { bestEval ,};
+    return {bestEval, {}};
 }
 
 int Bot_V4::staticExchangeEval(const Move& move,Board& board) {
@@ -168,8 +179,22 @@ int Bot_V4::selectLeastValuableAttacker(Bitboard attackers, bool color,Board& bo
 	return selectedSquare;
 }
 
+
 Move Bot_V4::botMove(bool turn,Board& board) {
 	totalNodes = 0;
+	
+	static OpeningBook openingBook;
+    std::vector<std::string> moveHistory = getMoveHistory(board); // Implementar esta función
+
+    /*// 1. Intentar seguir una apertura
+    std::string recommendedMove = openingBook.getNextMove(moveHistory);
+    if (!recommendedMove.empty()) {
+        Move openingMove = uciToMove(recommendedMove, board); // Convertir UCI a Move
+		cout<<"opening move fond!"<<endl;
+        if (Generator::isLegalmove(openingMove, board)) {
+            return openingMove;
+        }
+    }*/
 
 	Move bestMove;
 	search_result sr;
@@ -183,3 +208,5 @@ Move Bot_V4::botMove(bool turn,Board& board) {
 	}
 	return bestMove;
 }
+
+

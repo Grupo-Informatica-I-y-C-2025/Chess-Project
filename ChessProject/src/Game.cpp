@@ -8,14 +8,13 @@ void Game::activate( int xcell_sel, int ycell_sel)
 	if ((xcell_sel >= 0 && xcell_sel < N) && (ycell_sel >= 0 && ycell_sel < M)) {
 		if (board->selected(ycell_sel, xcell_sel))
 		{
-			board->unselectCell(ycell_sel, xcell_sel);
+			board->unselectAll();
 			movement.sourceSquare = -1, movement.targetSquare = -1;
 		}
 		else if (board->BitboardGetColor(ycell_sel, xcell_sel) == board->BitboardGetTurn())
 		{
-			board->unselectAll();
 			board->selectCell(ycell_sel, xcell_sel);
-			//board->printBoard(board->generateMovesFrom(board->coordToPos(ycell_sel, xcell_sel),board->BitboardGetColor(ycell_sel, xcell_sel)));
+
 			if(!board->isKramnik())movement.sourceSquare = -1;
 			registerCall(xcell_sel, ycell_sel);
 		}
@@ -40,23 +39,17 @@ void Game::registerCall(int xcell_sel, int ycell_sel) {
 
 bool Game::playTurn() {
 	bool turn = board->BitboardGetTurn();
-	/*if (!game_over && turn == bot && !generated) {
-		movement = bot4.botMove(turn);
-		//cout << "\nmove :" << movement.sourceSquare % 8 << movement.sourceSquare / 8 << " " << movement.targetSquare % 8 << movement.targetSquare / 8;
-		generated = true;
-	}*/
-	if (!game_over && turn == BLACK && !generated) {
-		movement = bot4.botMove(turn,*board);
-		//cout << "\nmove :" << movement.sourceSquare % 8 << movement.sourceSquare / 8 << " " << movement.targetSquare % 8 << movement.targetSquare / 8;
-		generated = true;
-	}
+	
+	if (!game_over && turn == bot && !pvp/*&& !generated*/)movement = bot4.botMove(turn,*board);
+		//generated = true;
+	
 
 	if (movement.sourceSquare >= 0 && movement.targetSquare >= 0) {
 		
-		movement.pieceType = board->BitboardGetType(movement.sourceSquare);
 		if (Generator::isLegalmove(movement,*board)) {
 			Generator::makeMove(movement,*board);
-			generated = false;
+			//generated = false;
+			board->moveHistory.push_back(movement);
 
 			scanEndGame(!turn);
 			if (!game_over && board->scanChecks(!turn)) cout << "\ncheck";
@@ -75,24 +68,23 @@ void Game::scanEndGame(bool color) {
 	vector<Move> moves = Generator::generateAllMoves(color,*board);
 	if (moves.size() == 0) {
 		if (board->scanChecks(color)) {
-			cout << "\ncheckmate";
+			cout << "checkmate"<<endl;
 			game_over = true;
-			return;
 		}
 		else {
-			cout << "\ndraw";
+			cout << "draw"<<endl;
 			game_over = true;
-			return;
 		}
 	}
 	if (board->scanRepetition()) {
-		cout << "\ndraw by repetition";
+		cout << "draw by repetition";
 		game_over = true;
 	}
 	if (board->moveCount == 499) {
 		game_over = true;
-		cout << "\noverride stack memory";
+		cout << "override stack memory";
 	}
+	cout<<endl;
 }
 
 void Game::saveGame() {
@@ -117,7 +109,7 @@ void Game::saveGame() {
 }
 
 
-void Game::loadSavedGame() {
+void Game::loadSavedGame(int choice) {
 	std::string dirPath = "./saved_games/";
 
 	if (!FileUtils::directoryExists(dirPath)) {
@@ -151,10 +143,6 @@ void Game::loadSavedGame() {
 		std::cout << " - Partida " << num << "\n";
 	}
 
-	int choice;
-	std::cout << "Ingresa el n�mero de la partida a cargar: ";
-	std::cin >> choice;
-
 	if (std::find(saves.begin(), saves.end(), choice) == saves.end()) {
 		std::cerr << "N�mero inv�lido.\n";
 		return;
@@ -171,7 +159,7 @@ void Game::loadSavedGame() {
 }
 
 
-std::vector<int> Game::listSavedGames() const {
+std::vector<int> Game::listSavedGames()  {
 	std::vector<int> saves;
 	std::string dirPath = "./saved_games/";
 
@@ -202,7 +190,7 @@ std::vector<int> Game::listSavedGames() const {
 }
 
 
-int Game::getNextSaveNumber() const {
+int Game::getNextSaveNumber()  {
 	std::vector<int> saves;
 	std::string dirPath = "./saved_games/";
 
@@ -225,10 +213,57 @@ int Game::getNextSaveNumber() const {
 }
 
 
-void Game::loadFENPositions(const std::string& filename) {
-	std::ifstream file(filename);
-	std::string fen;
-	while (std::getline(file, fen)) {
-		fenPositions.push_back(fen);
+int Game::LoadType(int choice) {
+std::string dirPath = "./saved_games/";
+
+	if (!FileUtils::directoryExists(dirPath)) {
+		std::cerr << "No hay partidas guardadas.\n";
+		return -1;
 	}
+
+	std::vector<int> saves;
+
+	for (const auto& filename : FileUtils::listDirectory(dirPath)) {
+		if (filename.find("partida") == 0 && filename.size() > 13 && filename.substr(filename.size() - 6) == ".chess") {
+			try {
+				int num = std::stoi(filename.substr(7, filename.size() - 13));
+				saves.push_back(num);
+			}
+			catch (...) {
+				// Ignorar errores
+			}
+		}
+	}
+
+	if (saves.empty()) {
+		std::cerr << "No hay partidas guardadas.\n";
+		return -1;
+	}
+
+	std::sort(saves.begin(), saves.end());
+
+	if (std::find(saves.begin(), saves.end(), choice) == saves.end()) {
+		std::cerr << "N�mero inv�lido.\n";
+		return -1;
+	}
+
+	std::string filename = "partida" + std::to_string(choice) + ".chess";
+
+	std::ifstream file("./saved_games/" + filename);
+	if (!file.is_open()) {
+		std::cerr << "Error: No se pudo abrir el archivo\n";
+		return -1;
+	}
+
+	// Leer tipo de tablero
+	std::string variant;
+	std::getline(file,variant);
+	//cout<<stoi(variant)<<endl;
+	if(0>stoi(variant) || stoi(variant)>5){
+		std::cerr << "Error: El tipo de tablero no es valido\n";
+		file.close();
+		return -1;
+	}
+	file.close();
+	return stoi(variant);
 }

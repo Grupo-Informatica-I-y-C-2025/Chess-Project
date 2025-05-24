@@ -274,30 +274,18 @@ void Board::selectCell(int x, int y) {
 	Bitboard mask = coordToBit(x, y);
 
 	// Limpiar cualquier flag
-	unselectCell(x, y);
+	unselectAll();
 
 	// Actualizar bitboards espec�ficos
 	currentState.selected |= mask;
 
-}
-void Board::unselectCell(int x, int y) {
-	Bitboard mask = coordToBit(x, y);
-
-	// Buscar en todos los tipos y colores
-	if (currentState.selected & mask) {
-		currentState.selected &= ~mask;
-
-	}
 }
 void Board::unselectAll() {
 	currentState.selected=0;
 }
 bool Board::selected(int x, int y) {
 	Bitboard mask = coordToBit(x, y);
-
-	bool s = 0;
-	if (currentState.selected & mask)s = 1;
-	return s;
+	return currentState.selected & mask;
 }
 
 string Board::encodeState(ChessState chess_state) const {
@@ -478,11 +466,13 @@ bool Board::saveGame(const std::string& filename) {
 	}
 
 	// 5. Escribir datos
+	file << gametype << "\n";
 	try {
 		for (int i = 0; i < moveCount; i++) {
 			file << encodeState(prevStates[i]) << "\n";
 			std::cout << "Guardado estado " << i << "\n";
 		}
+		file << encodeState(currentState) << "\n";
 		file.close();
 	}
 	catch (const std::exception& e) {
@@ -502,6 +492,15 @@ bool Board::loadGame(const std::string& filename) {
 	// Limpiar estados previos
 	moveCount = 0;
 	currentState = ChessState{}; // Estado inicial vac�o
+
+	// Leer tipo de tablero
+	std::string variant;
+	std::getline(file,variant);
+	if(stoi(variant) != gametype){
+		std::cerr << "Error: El tipo de tablero no coincide\n";
+		file.close();
+		return false;
+	}
 
 	std::string encodedState;
 	int count = 0;
@@ -524,6 +523,7 @@ bool Board::loadGame(const std::string& filename) {
 	if (count > 0) {
 		moveCount = count;
 		currentState = prevStates[count - 1];
+		initCached();
 		Generator::updateAttackMap(*this); // Actualizar ataques
 	}
 	else {

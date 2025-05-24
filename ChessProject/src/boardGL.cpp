@@ -104,7 +104,7 @@ void BoardGL::MouseButton(int x, int y, int button, bool down, bool sKey, bool c
 		//game.registerCall(xcell_sel, ycell_sel);
 
 		////Iniciar movimiento
-		game.activate(xcell_sel, ycell_sel);
+		game->activate(xcell_sel, ycell_sel);
 		
 		attackPathActivation();
 	}
@@ -120,21 +120,16 @@ void BoardGL::KeyDown(unsigned char key) {
 	if (key == 'd') {
 		countBackUp();
 	}
-	if (key == 's') {
-		game.saveGame();
-	}
 
-	if (key == 'l') {
-		game.loadSavedGame();
-	}
 }
 void BoardGL::OnTimer(int value) {
-	if (!game.isgame_over()) {
-		game.playTurn();
+	if (!game->isgame_over()) {
+		game->playTurn();
 	}
 }
 
 void BoardGL::attackPathActivation(){
+	attackMap = 0;
 	if (board->getSelected() && !countBack) {
 		int source = portable_ctzll(board->getSelected());
 		int pieceType = board->BitboardGetType(source);
@@ -146,7 +141,5 @@ void BoardGL::attackPathActivation(){
 
 			if (Generator::isLegalmove(move,*board))attackMap|=1ULL<<target;
 		}
-
 	}
-	else attackMap = 0;
 }
