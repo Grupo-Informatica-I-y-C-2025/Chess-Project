@@ -221,7 +221,7 @@ protected:
 	ChessState prevStates[500];  // Pila de estados anteriores
 	int moveCount = 0;
 	ChessState currentState;
-
+ 
 	Bitboard getAttackMap(bool color)const {
 		return currentAttacks[color];
 	}
@@ -245,6 +245,8 @@ protected:
 
 
 public:
+
+	vector<Move> moveHistory;
 	// Constructores
 	Board(int n) : N(games[n].y), M(games[n].x), Kramnik(games[n].kramnik) {
 		gametype = n;

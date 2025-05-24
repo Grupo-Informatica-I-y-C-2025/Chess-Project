@@ -18,16 +18,26 @@ protected:
 	Move movement{-1,-1};
 
 public:
-	bool bot = 1;
-	bool player = 0;
+	bool bot;
+	bool pvp;
 	bool generated = 0;
 
-	Game(int n) {
+	Game(int n,int b) {
 		
 		board = new Board(n);
 
 		N = board->getSizeY();
 		M = board->getSizeX();
+		game_over = false;
+
+		if(b==2){
+			pvp = true;
+			bot = false;
+		}else{
+			pvp = false;
+			bot = (bool)b;
+		}
+
 	}
 
 	//reglas de movimiento
@@ -42,14 +52,16 @@ public:
 	bool playTurn();
 	
 	void saveGame();
-	void loadSavedGame();
+	void loadSavedGame(int);
 
-	std::vector<int> listSavedGames() const;
-	int getNextSaveNumber() const;
+	static std::vector<int> listSavedGames() ;
+	static int getNextSaveNumber() ;
+	static int LoadType(int );
+
 
 
 private:
-	bool game_over = false;
+	bool game_over;
 	std::vector<std::string> fenPositions;
 
 	int totalGames;
@@ -58,8 +70,7 @@ private:
 	int draws;
 
 public:
-
-	void loadFENPositions(const std::string& );
-	void runSimulation(int );
 	void printStats() const;
+
+	bool getTurn(){return board->currentState.turn;}
 };

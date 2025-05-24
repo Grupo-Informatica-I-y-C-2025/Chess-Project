@@ -29,7 +29,11 @@ struct CaptureAnimation {
     float timer;
 };
 
+class window;
+class LoadMenu;
 class BoardGL {
+	friend class window;
+	friend class LoadMenu;
 	
 	void drawCircle(float cx, float cy, float r, int num_segments);
 	std::vector<CaptureAnimation> activeCaptures;
@@ -37,11 +41,12 @@ class BoardGL {
 	
 public:
 	//define board 
-	BoardGL( Game g) : game(g) {
-		board = g.board;
+	BoardGL(int n,int b) {
+		game = new Game(n,b);
+		board = game->board;
 		width = 0.15;				//width of each cell in the grid
-		N = g.board->getSizeY();
-		M = g.board->getSizeX();		//Grid NxN
+		N = game->board->getSizeY();
+		M = game->board->getSizeX();		//Grid NxN
 		dist = 2;					//distance of viewpoint from center of the board
 		center_z = 0;
 	}
@@ -69,13 +74,14 @@ public:
 
 	//coord
 	void cell2center(int fila, int columna, float& glx, float& gly) {
-		glx = columna * width + width / 2.0f;
+		glx = (M-1) * width - columna * width + width / 2.0f;
 		gly = fila * width + width / 2.0f;
 	}
 
 	void world2cell(double x, double y, int& cell_x, int& cell_y) {
 		cell_x = static_cast<int>(y / width); 
 		cell_y = static_cast<int>(x / width);
+		cell_y = (M-1) - cell_y;
 	}
 
 protected:
@@ -92,7 +98,7 @@ protected:
 	int N;
 	int M;//size 
 	Board* board;
-	Game game;
+	Game* game;
 
 	//visualization	
 	double center_x, center_y, center_z;
