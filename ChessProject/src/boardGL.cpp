@@ -24,16 +24,16 @@ void BoardGL::Draw() {
 	glLoadIdentity();
 	bool whiteTurn = (board->BitboardGetTurn() == 0); // o como tengas el sistema
 
-	//if (whiteTurn) {
-		gluLookAt(center_x, center_y - 1, dist-4,
+	if (whiteTurn) {
+		gluLookAt(center_x, center_y - 2, dist - 4,
 			center_x, center_y, center_z,
 			0.0f, 1.0f, 0.0f);
-	/*}
+	}
 	else {
-		gluLookAt(center_x, center_y +1, dist-4,  // punto de vista opuesto
+		gluLookAt(center_x, center_y +2, dist-4,  // punto de vista opuesto
 			center_x, center_y, center_z,
 			0.0f, -1.0f, 0.0f);
-	}*/
+	}
 	
 	glEnable(GL_LIGHTING);
 
@@ -124,7 +124,7 @@ void BoardGL::KeyDown(unsigned char key) {
 }
 void BoardGL::OnTimer(int value) {
 	if (!game->isgame_over()) {
-		game->playTurn();
+		game->playTurn(difficulty);
 	}
 }
 
