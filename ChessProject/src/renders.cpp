@@ -322,9 +322,10 @@ void BoardGL::DrawCell(int y, int x, int i) {
 
 	bool isWhiteSquare = (x + y) % 2 == 0;
 	if (isWhiteSquare)
-		glColor3f(0.9f, 0.9f, 0.9f);  // blanco suave
+		 		glColor3f(0.3f, 0.2f, 0.2f);// gris oscuro
 	else
-		glColor3f(0.3f, 0.3f, 0.2f);  // gris oscuro
+		glColor3f(0.9f, 0.9f, 0.9f);// blanco suave
+		  
 
 	glDisable(GL_LIGHTING);
 	glPushMatrix();
