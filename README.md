@@ -25,36 +25,42 @@ El principal objetivo de este proyecto es entender los principios de la programa
 
 # Organización del proyecto:
 
-El proyecto se llama "MyChessProject" y está ambientado en ******************** y tiene incorporado tanto texturas y formas innovadoras como sonidos de animación ********, también la vista del ojo va girando según pasa cada turno para ofrecer al usuario esa sensación de primera persona.
+El proyecto se llama "MyChessProject" y está ambientado en un ajedrez medieval de piedra, y tiene incorporado texturas y formas innovadoras, también la vista del ojo va girando según pasa cada turno para ofrecer al usuario esa sensación de primera persona y una experiencia más cercana.
+
+Comenzaremos describiendo la arquitectura del sistema y las estructuras de datos, seguido de una descripción de los algoritmos utilizados para la validación de movimientos y el juego de la IA. Finalmente, presentaremos los resultados de las pruebas y discutiremos posibles vías para el desarrollo futuro.
+
+Al compilar el código, lo primero que se nos abre es una pantalla conocida como menú principal, en la cual podremos seleccionar el tipo y la variante del ajedrez que el usuario quiera jugar.
+
+Seleccionar modo de juego:
+1.	Classic
+2.	Classic Kramnik
+3.	Demi
+4.	Demi Kramnik
+5.	Silverbullet
+6.	Silverbullet Kramnik
+
+Una vez se selecciona uno de los modos, distinguiendo entre las variantes Kramnik y normales, se pide al usuario que seleccione quien va a jugar la partida, entre las siguientes opciones, quedando el menú de la siguiente manera
+Tipo de Partida
+•	Jugador VS Jugador
+•	Jugador VS IA
+•	IA vs IA
 
 
-Al compilar el código, lo primero que se nos abre es una pantalla conocida como menú principal, en la cuál podremos seleccionar el tipo y la variante del ajedrez que el usuario quiera jugar. 
+Si se selecciona el modo de Jugador vs jugador, la partida esta lista para comenzar pues no hay más configuración del juego posible. Sin embargo, en el caso de que el usuario elija la opción “Jugador VS IA”, el sistema le preguntara al usuario con que color va a desear jugar el, con un menú con la siguiente estructura:
 
-Selecciona ******:
+Elegir color de las piezas del Jugador
+•	Blancas
+•	Negras
 
-1. rgdg
+Una vez el usuario elige, también se le da a elegir entre los diferentes grados de dificultad de la IA, que desarrollaremos más adelante, para afrontar más o menos desafío:
 
-2. nfm
+Seleccione dificultad
+•	Fácil 
+•	Medio
+•	Difícil
+•	Maestro
 
-3. jklvi
-
-4. kjyul
-
-5. gjhcl
-
-6. fhjm
-
-
-Una vez escogida la opción del menú principal el siguinte menú que nos aparecerá es el responsable de preguntar al usuario si la modalidad de juego que quiere es contra un bot o 1vs1. Este menú queda tal que así:
-
--
--
-
-
-Además hay opciones para parar la partida, reiniciarla o salir.
-SEGUIR RELLENANDO TODO CUANDO ESTEN TODAS LAS FUNCIONES Y MENUS
-Selecione usuario:
-
+Este último menú aparece de igual manera cuando se selecciona el modo de IA vs IA solo que esta vez, se configura la dificultad de ambas IAs que jugaran entre sí por lo que no es necesario elegir color. Una vez configuradas las opciones del menú principal comienza la partida con el modo, los jugadores, la dificultad y el color seleccionado.
 
 
 
@@ -72,4 +78,3 @@ Marcos Rodríguez Pena     m.rpena@alumnos.upm.es
 
 Daniel Lobera Rodriguez   daniel.lobera@alumnos.upm.es
 
-EXPLICACION JUEGO AJEDREZ INFO (LO HAGO YO MARIO)
