@@ -37,10 +37,10 @@ void Game::registerCall(int xcell_sel, int ycell_sel) {
 	}
 }
 
-bool Game::playTurn() {
+bool Game::playTurn(int difficulty =1) {
 	bool turn = board->BitboardGetTurn();
 	
-	if (!game_over && turn == bot && !pvp/*&& !generated*/)movement = bot4.botMove(turn,*board);
+	if (!game_over && turn == bot && !pvp/*&& !generated*/)movement = bot4.botMove(turn,difficulty,*board);
 		//generated = true;
 	
 
