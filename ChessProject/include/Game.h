@@ -49,7 +49,7 @@ public:
 	//public game functions
 	void scanEndGame(bool);
 	bool isgame_over() { return game_over; }
-	bool playTurn();
+	bool playTurn(int );
 	
 	void saveGame();
 	void loadSavedGame(int);
