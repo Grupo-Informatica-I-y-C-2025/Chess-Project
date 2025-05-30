@@ -8,20 +8,11 @@ JUEGO AJEDREZ Y SUS VARIACIONES KRAMNIK
 
 -El ajedrez SILVERBULLET 4X5 consiste en un tablero 4x5 con las piezas siguientes: TORRE - REINA - REY - TORRE  y una fila de peones. No se puede enrocar y la coronacion solo permite torre y reina.
 
--//comentar tema jugabilidad bot vs jugador ,jugador vs jugador
 
 # Objetivos del trabajo:
 
 El principal objetivo de este proyecto es entender los principios de la programación en C++, a la vez que pasarlo bien creando un proyecto interesante sobre el juego de la ajedrez y que nos acerca un poco más a la realidad de lo que es la informática en cierta parte. Además, podremos empezar a desarrollar nuestros propios proyectos con mayor conocimiento y habilidad, ya sea con un fin didáctico o personal.
 
-
-# Aspectos tecnicos:
-
--El programa está completamente escrito en C++, además no se incluye ningun tipo de entorno de desarrollo grafico como unity, el aspecto grafico está desarrollado en OpenGL a través de la librería freeglut.
-
--Se usará principalmente CMake para la gestión de las dependencias del proyecto.
-
--Hemos decidido no incluir la librería ETSIDI debido al problema de compatibilidad entre sistemas operativos.
 
 # Organización del proyecto:
 
@@ -39,7 +30,9 @@ Seleccionar modo de juego:
 5.	Silverbullet
 6.	Silverbullet Kramnik
 
-Una vez se selecciona uno de los modos, distinguiendo entre las variantes Kramnik y normales, se pide al usuario que seleccione quien va a jugar la partida, entre las siguientes opciones, quedando el menú de la siguiente manera
+
+Una vez se selecciona uno de los modos, distinguiendo entre las variantes Kramnik y normales, se pide al usuario que seleccione quien va a jugar la partida, entre las siguientes opciones, quedando el menú de la siguiente manera:
+
 Tipo de Partida
 •	Jugador VS Jugador
 •	Jugador VS IA
@@ -52,6 +45,7 @@ Elegir color de las piezas del Jugador
 •	Blancas
 •	Negras
 
+
 Una vez el usuario elige, también se le da a elegir entre los diferentes grados de dificultad de la IA, que desarrollaremos más adelante, para afrontar más o menos desafío:
 
 Seleccione dificultad
@@ -60,8 +54,8 @@ Seleccione dificultad
 •	Difícil
 •	Maestro
 
-Este último menú aparece de igual manera cuando se selecciona el modo de IA vs IA solo que esta vez, se configura la dificultad de ambas IAs que jugaran entre sí por lo que no es necesario elegir color. Una vez configuradas las opciones del menú principal comienza la partida con el modo, los jugadores, la dificultad y el color seleccionado.
 
+Este último menú aparece de igual manera cuando se selecciona el modo de IA vs IA solo que esta vez, se configura la dificultad de ambas IAs que jugaran entre sí por lo que no es necesario elegir color. Una vez configuradas las opciones del menú principal comienza la partida con el modo, los jugadores, la dificultad y el color seleccionado.
 
 
 
