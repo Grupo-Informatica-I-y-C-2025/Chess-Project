@@ -1,4 +1,4 @@
-﻿#include "Bot_V4.h"
+#include "Bot_V4.h"
 #include "generator.h"
 #include "evaluation.h"
 #include "openings.h"
@@ -180,7 +180,7 @@ int Bot_V4::selectLeastValuableAttacker(Bitboard attackers, bool color,Board& bo
 }
 
 
-Move Bot_V4::botMove(bool turn,Board& board) {
+Move Bot_V4::botMove(bool turn,int maxDepth,Board& board) {
 	totalNodes = 0;
 	
 	static OpeningBook openingBook;
@@ -198,7 +198,6 @@ Move Bot_V4::botMove(bool turn,Board& board) {
 
 	Move bestMove;
 	search_result sr;
-	int maxDepth = 5; // ajustar según rendimiento
 	for (int d = 1; d <= maxDepth; ++d) {
 		cout << "\n--- Search Depth " << d << " ---" << endl;
 		sr = SearchMoves(d, INIT_MIN, INIT_MAX,board);
