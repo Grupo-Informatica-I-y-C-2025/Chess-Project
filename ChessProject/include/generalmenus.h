@@ -1,4 +1,5 @@
 #pragma once
+#pragma once
 
 #include <string>
 #include <vector>
@@ -54,7 +55,11 @@ public:
         PVP=14,
         BOT=15,
         WHITE=16,
-        BLACK=17
+        BLACK=17,
+        FACIL=18,
+        MEDIO=19,
+        DIFICIL=20,
+        MAESTRO=21
 	};
 
 	// Inicializar el menú
@@ -375,12 +380,12 @@ public:
     
 };
 
-class LoadMenu : public GeneralMenu {
+class CustomLoadMenu : public GeneralMenu {
 std::vector<int> save_list;
 
 public:
 
-    LoadMenu() {
+    CustomLoadMenu() {
         
         // Customs
          title = "CARGAR PARTIDA";
@@ -416,7 +421,43 @@ public:
         }
     }
 };
+class SelectDifficultyMenu : public GeneralMenu {
+public:
+    SelectDifficultyMenu() {
+        // Configurar las opciones del menú
+        optionTexts.clear();
+        options.clear();
 
+        optionTexts.push_back("FACIL");
+        options.push_back(Option::FACIL);
+
+        optionTexts.push_back("MEDIO");
+        options.push_back(Option::MEDIO);
+
+        optionTexts.push_back("DIFICIL");
+        options.push_back(Option::DIFICIL);
+
+        optionTexts.push_back("MAESTRO");
+        options.push_back(Option::MAESTRO);
+
+        title = "DIFFICULTAD";
+
+        borde_exterior = AZUL_CLARO_BRILLANTE;
+
+        fondo_panel_sup = AZUL_OSCURO;
+        fondo_panel_inf = AZUL_MAS_OSCURO;
+
+        boton_seleccionado_sup = AZUL_BRILLANTE;
+        boton_seleccionado_inf = AZUL_MEDIO;
+
+        boton_sup = AZUL_SUAVE;
+        boton_inf = AZUL_INCLUSO_MAS_OSCURO;
+
+
+        selectedIndex = 0;
+        active = false; // Asegurarse de que comienza inactivo
+    }
+};
 
 
 // Dibujar el menú
@@ -656,3 +697,4 @@ bool GeneralMenu::isActive() const {
 void GeneralMenu::setActive(bool isActive) {
     active = isActive;
 }
+
