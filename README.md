@@ -2,7 +2,7 @@
 
 JUEGO AJEDREZ Y SUS VARIACIONES KRAMNIK
 
--La normativa especifica del trabajo explicita que se debe incluir la posibilidad de comer sus propias piezas (ajedrez KRAMNIK). Ademas cada grupo tiene asignado una u varias variantes de tablero y de normas especificas; nuestro grupo implementará las reglas del ajedres DEMI y del ajedrez SILVERBULLET 4X5 (así como el juego clasico de ajedrez). Desde el equipo hemos decidido incluir estas 3 variantes, con la posibilidad para cada una de implementar la regla KRAMNIK en cada una de ellas. 
+La normativa especifica del trabajo explicita que se debe incluir la posibilidad de comer sus propias piezas (ajedrez KRAMNIK). Ademas cada grupo tiene asignado una u varias variantes de tablero y de normas especificas; nuestro grupo implementará las reglas del ajedres DEMI y del ajedrez SILVERBULLET 4X5 (así como el juego clasico de ajedrez). Desde el equipo hemos decidido incluir estas 3 variantes, con la posibilidad para cada una de implementar la regla KRAMNIK en cada una de ellas. 
 
 -El ajedrez DEMI consiste en un tablero 4x8 con la mitad derecha del tablero clasico, 1es decir REY - ALFIL - CABALLO - TORRE y una fila de peones. No se puede enrocar, y la coronacion excluye la reina.
 
@@ -31,28 +31,28 @@ Seleccionar modo de juego:
 6.	Silverbullet Kramnik
 
 
-Una vez se selecciona uno de los modos, distinguiendo entre las variantes Kramnik y normales, se pide al usuario que seleccione quien va a jugar la partida, entre las siguientes opciones, quedando el menú de la siguiente manera:
+Una vez se selecciona uno de los modos, distinguiendo entre las variantes Kramnik y normales, se pide al usuario que seleccione quien va a jugar la partida, entre las siguientes opciones, quedando el menú de la siguiente manera.
 
-Tipo de Partida
-•	Jugador VS Jugador
-•	Jugador VS IA
-
-
-
-Si se selecciona el modo de Jugador vs jugador, la partida esta lista para comenzar pues no hay más configuración del juego posible. Sin embargo, en el caso de que el usuario elija la opción “Jugador VS IA”, el sistema le preguntara al usuario con que color va a desear jugar el, con un menú con la siguiente estructura:
-
-Elegir color de las piezas del Jugador
-•	Blancas
-•	Negras
+Tipo de Partida:
+- Jugador VS Jugador
+- Jugador VS IA
 
 
-Una vez el usuario elige, también se le da a elegir entre los diferentes grados de dificultad de la IA, que desarrollaremos más adelante, para afrontar más o menos desafío:
 
-Seleccione dificultad
-•	Fácil 
-•	Medio
-•	Difícil
-•	Maestro
+Si se selecciona el modo de Jugador vs jugador, la partida esta lista para comenzar pues no hay más configuración del juego posible. Sin embargo, en el caso de que el usuario elija la opción “Jugador VS IA”, el sistema le preguntara al usuario con que color va a desear jugar el, con un menú con la siguiente estructura.
+
+Elegir color de las piezas del Jugador:
+- Blancas
+- Negras
+
+
+Una vez el usuario elige, también se le da a elegir entre los diferentes grados de dificultad de la IA, que desarrollaremos más adelante, para afrontar más o menos desafío.
+
+Seleccione dificultad:
+- Fácil
+- Medio
+- Difícil
+- Maestro
 
 
 Una vez configuradas las opciones del menú principal comienza la partida con el modo, los jugadores, la dificultad y el color seleccionado.
