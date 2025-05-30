@@ -36,7 +36,7 @@ Una vez se selecciona uno de los modos, distinguiendo entre las variantes Kramni
 Tipo de Partida
 •	Jugador VS Jugador
 •	Jugador VS IA
-•	IA vs IA
+
 
 
 Si se selecciona el modo de Jugador vs jugador, la partida esta lista para comenzar pues no hay más configuración del juego posible. Sin embargo, en el caso de que el usuario elija la opción “Jugador VS IA”, el sistema le preguntara al usuario con que color va a desear jugar el, con un menú con la siguiente estructura:
@@ -55,7 +55,7 @@ Seleccione dificultad
 •	Maestro
 
 
-Este último menú aparece de igual manera cuando se selecciona el modo de IA vs IA solo que esta vez, se configura la dificultad de ambas IAs que jugaran entre sí por lo que no es necesario elegir color. Una vez configuradas las opciones del menú principal comienza la partida con el modo, los jugadores, la dificultad y el color seleccionado.
+Una vez configuradas las opciones del menú principal comienza la partida con el modo, los jugadores, la dificultad y el color seleccionado.
 
 
 
