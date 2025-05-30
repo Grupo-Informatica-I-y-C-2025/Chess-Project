@@ -157,3 +157,6 @@ static int positionalEvaluation(bool,const Board&);
 };
 
 
+
+
+
