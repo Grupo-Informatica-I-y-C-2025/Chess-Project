@@ -17,7 +17,7 @@ public:
 
 	Bot_V4(){}
 
-	Move botMove(bool,Board&);
+	Move botMove(bool,int,Board&);
 
 private:
 
