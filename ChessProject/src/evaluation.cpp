@@ -311,3 +311,5 @@ int Evaluation::positionalEvaluation(bool color,const Board& board) {
 	return score;
 }
 
+
+
