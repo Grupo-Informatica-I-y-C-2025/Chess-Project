@@ -41,7 +41,7 @@ class BoardGL {
 	
 public:
 	//define board 
-	BoardGL(int n,int b) {
+	BoardGL(int n,int b,int d) {
 		game = new Game(n,b);
 		board = game->board;
 		width = 0.15;				//width of each cell in the grid
@@ -49,6 +49,7 @@ public:
 		M = game->board->getSizeX();		//Grid NxN
 		dist = 2;					//distance of viewpoint from center of the board
 		center_z = 0;
+		difficulty = d;
 	}
 	virtual ~BoardGL() {}
 
@@ -86,6 +87,7 @@ public:
 
 protected:
 	int countBack=0;
+	int difficulty =1;
 
 	void countBackUp() {if (countBack > 0)countBack--;}
 	void countBackDown() {if (countBack < board->moveCount) countBack++;}
